@@ -1,22 +1,279 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HYY EARN</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0;min-height:100vh;display:grid;place-items:center;
+  background:#f8f7f2;color:#171717;font-family:Arial,sans-serif;
+}
+.card{
+  background:white;padding:30px 24px;border-radius:20px;
+  text-align:center;width:min(90%,360px);
+  box-shadow:0 8px 30px #0000000d;
+}
+h1{font-size:32px}
+h1 span{color:#d49b00}
+button,input{
+  width:100%;padding:14px;border-radius:10px;font-size:16px;
+  margin-top:12px;
+}
+button{background:#171717;color:white;border:0;cursor:pointer}
+input{border:1px solid #ddd}
+#status{font-size:13px;margin-top:15px;overflow-wrap:anywhere}
+</style>
+</head>
+<body>
+<div class="card" id="card">
+  <h1>HYY <span>EARN</span></h1>
+  <p>Complete tasks. Earn rewards.</p>
+  <button id="login">Continue with Google</button>
+  <p id="status">Demo platform</p>
+</div>
+
 <script>
 const SUPABASE_URL = "https://hofrfwjldbrfveufuvxu.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_cdAswmtul4dLtyXvflrWgQ_i42neFMJ";
+const SUPABASE_ANON_KEY = "sb_publishable_cdAswmtul4dLtyXvfIrWgQ_i42neFMJ";
 
-const client = supabase.createClient(
-  SUPABASE_URL,
-  SUPABASE_ANON_KEY
-);
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HYY EARN</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f8f7f2;
+      color: #171717;
+      display: grid;
+      place-items: center;
+      min-height: 100vh;
+    }
+    .card {
+      background: white;
+      padding: 35px 25px;
+      border-radius: 20px;
+      text-align: center;
+      width: min(85%, 350px);
+      box-shadow: 0 8px 30px #0000000d;
+    }
+    h1 { font-size: 32px; }
+    span { color: #d49b00; }
+    button {
+      background: #171717;
+      color: white;
+      border: 0;
+      padding: 14px 22px;
+      border-radius: 10px;
+      font-size: 16px;
+      width: 100%;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    input {
+      box-sizing: border-box;
+      width: 100%;
+      padding: 14px;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      font-size: 16px;
+      margin-top: 12px;
+    }
+    #status { font-size: 13px; margin-top: 15px; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>HYY <span>EARN</span></h1>
+    <p>Complete tasks. Earn rewards.</p>
 
-const card = document.querySelector(".card");
-const status = document.getElementById("status");
-const login = document.getElementById("login");
+    <div id="loginBox">
+      <button id="login">Continue with Google</button>
+    </div>
+
+    <div id="profileBox" class="hidden">
+      <h3>Create your username</h3>
+      <input
+        id="username"
+        type="text"
+        placeholder="Choose a username"
+        maxlength="20"
+      >
+      <button id="saveUsername">Save Username</button>
+    </div>
+
+    <div id="dashboard" class="hidden">
+      <h3>Welcome!</h3>
+      <p id="userName"></p>
+      <p>Your account is ready.</p>
+      <button id="logout">Sign out</button>
+    </div>
+
+    <p id="status">Demo platform</p>
+  </div>
+
+  <script>
+    const SUPABASE_URL =
+      "https://hofrfwjldbrfveufuvxu.supabase.co";
+
+    // Keep your FULL existing publishable key here.
+    const SUPABASE_ANON_KEY =
+      "sb_publishable_cdAswmtul4dLtyXvflrWgQ_i42neFMJ";
+
+    const client = supabase.createClient(
+      SUPABASE_URL,
+      SUPABASE_ANON_KEY
+    );
+
+    const status = document.getElementById("status");
+    const loginBox = document.getElementById("loginBox");
+    const profileBox = document.getElementById("profileBox");
+    const dashboard = document.getElementById("dashboard");
+
+    function show(box) {
+      loginBox.classList.add("hidden");
+      profileBox.classList.add("hidden");
+      dashboard.classList.add("hidden");
+      box.classList.remove("hidden");
+    }
+
+    async function checkProfile(user) {
+      status.textContent = "Checking your profile...";
+
+      const { data, error } = await client
+        .from("profiles")
+        .select("username")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (error) {
+        status.textContent = "Profile error: " + error.message;
+        return;
+      }
+
+      if (data) {
+        document.getElementById("userName").textContent =
+          "@" + data.username;
+        show(dashboard);
+        status.textContent = "Login successful!";
+      } else {
+        show(profileBox);
+        status.textContent = "Choose your username.";
+      }
+    }
+
+    document.getElementById("login").onclick = async () => {
+      status.textContent = "Connecting to Google...";
+
+      const { error } = await client.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: window.location.origin
+        }
+      });
+
+      if (error) {
+        status.textContent = error.message;
+      }
+    };
+
+    document.getElementById("saveUsername").onclick = async () => {
+      const username = document
+        .getElementById("username")
+        .value.trim()
+        .toLowerCase();
+
+      if (!/^[a-z0-9_]{3,20}$/.test(username)) {
+        status.textContent =
+          "Use 3-20 letters, numbers or underscores.";
+        return;
+      }
+
+      status.textContent = "Saving username...";
+
+      const { data: sessionData } =
+        await client.auth.getSession();
+
+      const user = sessionData.session?.user;
+
+      if (!user) {
+        status.textContent = "Please login again.";
+        show(loginBox);
+        return;
+      }
+
+      const { error } = await client
+        .from("profiles")
+        .insert({
+          id: user.id,
+          username: username
+        });
+
+      if (error) {
+        if (error.code === "23505") {
+          status.textContent = "Username already taken. Try another.";
+        } else {
+          status.textContent = "Error: " + error.message;
+        }
+        return;
+      }
+
+      document.getElementById("userName").textContent =
+        "@" + username;
+
+      show(dashboard);
+      status.textContent = "Username saved successfully!";
+    };
+
+    document.getElementById("logout").onclick = async () => {
+      await client.auth.signOut();
+      show(loginBox);
+      status.textContent = "Signed out.";
+    };
+
+    async function initialize() {
+      const { data, error } = await client.auth.getSession();
+
+      if (error) {
+        status.textContent = error.message;
+        return;
+      }
+
+      if (data.session?.user) {
+        await checkProfile(data.session.user);
+      } else {
+        show(loginBox);
+      }
+    }
+
+    client.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_IN" && session?.user) {
+        checkProfile(session.user);
+      }
+    });
+
+    initialize();
+  </script>
+</body>
+</html>
+
+const card = document.getElementById("card");
+const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 function showUsernameForm(user) {
   card.innerHTML = `
     <h1>HYY <span>EARN</span></h1>
-    <p>Welcome! Create your username.</p>
-    <input id="username" placeholder="Enter username"
-      style="padding:14px;width:85%;margin-bottom:15px">
+    <p>Create your username</p>
+    <input id="username" placeholder="Enter username">
     <button id="save">Save Username</button>
     <p id="status"></p>
   `;
@@ -32,8 +289,7 @@ function showUsernameForm(user) {
 
     msg.textContent = "Saving...";
 
-    const { error } = await client
-      .from("profiles")
+    const { error } = await client.from("profiles")
       .insert({ id: user.id, username });
 
     if (error) {
@@ -42,7 +298,6 @@ function showUsernameForm(user) {
         : error.message;
       return;
     }
-
     showDashboard(username);
   };
 }
@@ -50,12 +305,12 @@ function showUsernameForm(user) {
 function showDashboard(username) {
   card.innerHTML = `
     <h1>HYY <span>EARN</span></h1>
-    <h2>Welcome, ${username}!</h2>
+    <h2 id="welcome"></h2>
     <p>Account created successfully.</p>
     <p>Demo platform</p>
     <button id="logout">Logout</button>
   `;
-
+  document.getElementById("welcome").textContent = "Welcome, " + username + "!";
   document.getElementById("logout").onclick = async () => {
     await client.auth.signOut();
     location.reload();
@@ -63,39 +318,44 @@ function showDashboard(username) {
 }
 
 async function checkLogin() {
-  const { data } = await client.auth.getSession();
-  const user = data.session?.user;
+  const { data, error } = await client.auth.getSession();
+  if (error) {
+    document.getElementById("status").textContent = error.message;
+    return;
+  }
 
+  const user = data.session?.user;
   if (!user) return;
 
-  const { data: profile, error } = await client
+  const { data: profile, error: profileError } = await client
     .from("profiles")
     .select("username")
     .eq("id", user.id)
     .maybeSingle();
 
-  if (error) {
-    status.textContent = error.message;
-    return;
-  }
-
-  if (profile) {
+  if (profileError) {
+    document.getElementById("status").textContent = profileError.message;
+  } else if (profile) {
     showDashboard(profile.username);
   } else {
     showUsernameForm(user);
   }
 }
 
-login.onclick = async () => {
-  status.textContent = "Connecting...";
-
+document.getElementById("login").onclick = async () => {
+  document.getElementById("status").textContent = "Connecting...";
   const { error } = await client.auth.signInWithOAuth({
     provider: "google",
     options: { redirectTo: window.location.origin }
   });
-
-  if (error) status.textContent = error.message;
+  if (error) document.getElementById("status").textContent = error.message;
 };
 
-checkLogin();
+if (window.supabase) {
+  checkLogin();
+} else {
+  document.getElementById("status").textContent = "Supabase failed to load. Refresh the page.";
+}
 </script>
+</body>
+</html>
