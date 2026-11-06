@@ -58,7 +58,7 @@ function showUsername(user){
    return;
   }
   status.textContent="Saving...";
-  const {error}=await client.from("profiles").insert({
+  const {error}=await client.from("profilea").insert({
    id:user.id,username:username
   });
   if(error){
@@ -87,7 +87,7 @@ async function checkLogin(){
  const user=data.session?.user;
  if(!user){showLogin();return;}
  const {data:profile,error:profileError}=await client
-  .from("profiles")
+  .from("profilea")
   .select("username")
   .eq("id",user.id)
   .maybeSingle();
