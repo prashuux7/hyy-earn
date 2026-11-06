@@ -28,7 +28,6 @@ button:disabled{opacity:.5}
  <h1>HYY <span>EARN</span></h1>
  <div id="content">Loading...</div>
  <p id="status"></p>
- <p id="dbg" class="muted" style="overflow-wrap:anywhere"></p>
 </div>
 
 <script>
@@ -46,16 +45,10 @@ const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 
 const content = document.getElementById("content");
 const status = document.getElementById("status");
-const dbg = document.getElementById("dbg");
 
 function showStatus(message){
  status.textContent = message || "";
 }
-
-dbg.textContent =
- "key: " + (SUPABASE_ANON_KEY ? "set" : "EMPTY") +
- " | hash token: " + location.hash.includes("access_token") +
- " | code: " + location.search.includes("code=");
 
 const urlParams = new URLSearchParams(
  location.hash.slice(1) + "&" + location.search.slice(1)
@@ -183,8 +176,6 @@ async function checkLogin(){
 }
 
 client.auth.onAuthStateChange((event,session)=>{
- dbg.textContent += " | " + event + ":" + (session ? "yes" : "no");
-
  if(event === "INITIAL_SESSION") return;
 
  if(session?.user && event === "SIGNED_IN"){
