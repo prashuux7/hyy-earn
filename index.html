@@ -69,7 +69,7 @@ async function checkLogin() {
   if (!user) return;
 
   const { data: profile, error } = await client
-    .from("profilea")
+    .from("profiles")
     .select("username")
     .eq("id", user.id)
     .maybeSingle();
