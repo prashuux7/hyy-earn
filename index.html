@@ -33,16 +33,16 @@ body{
 }
 .profile-wrap{position:relative}
 .profile-menu{
- position:absolute;right:0;top:52px;width:190px;
+ position:absolute;right:0;top:52px;width:210px;
  background:white;padding:15px;border-radius:14px;
- box-shadow:0 5px 25px #32106425;z-index:10;
- text-align:left;
+ box-shadow:0 5px 25px #32106425;z-index:10;text-align:left;
 }
 .profile-menu p{font-size:13px;overflow-wrap:anywhere;margin:0 0 12px}
 .profile-menu button{
  width:100%;padding:11px;border:0;border-radius:9px;
- background:#7138c8;color:white;
+ background:#7138c8;color:white;margin-top:7px;
 }
+.profile-menu .logout-btn{background:#f3eafa;color:#7138c8}
 .hidden{display:none!important}
 .card{
  background:white;border-radius:20px;padding:20px;
@@ -147,8 +147,6 @@ input{
 .link-btn{background:none;border:0;color:#947eac;padding:12px}
 button{cursor:pointer}
 button:disabled{opacity:.5;cursor:not-allowed}
-
-/* Withdrawal popup */
 .modal-overlay{
  position:fixed;inset:0;background:rgba(30,12,50,.55);
  display:flex;align-items:center;justify-content:center;
@@ -170,8 +168,25 @@ button:disabled{opacity:.5;cursor:not-allowed}
 }
 .modal-note{
  background:#f5effc;border-radius:12px;padding:12px;
- font-size:12px;color:#80669d;line-height:1.5;
- margin:10px 0;
+ font-size:12px;color:#80669d;line-height:1.5;margin:10px 0;
+}
+.admin-head{
+ background:linear-gradient(135deg,#7138c8,#a45be8);
+ color:white;border-radius:20px;padding:22px;margin-bottom:16px;
+}
+.admin-head h2{margin-bottom:5px}
+.admin-item{
+ background:white;border:1px solid #f0e7fa;border-radius:15px;
+ padding:17px;margin-bottom:12px;
+}
+.admin-item h3{margin-bottom:5px}
+.admin-tag{
+ display:inline-block;background:#f1e8fc;color:#7138c8;
+ padding:5px 9px;border-radius:20px;font-size:11px;
+}
+.back-btn{
+ border:0;background:#7138c8;color:white;padding:12px 17px;
+ border-radius:11px;font-weight:bold;margin-bottom:16px;
 }
 </style>
 </head>
@@ -184,6 +199,9 @@ button:disabled{opacity:.5;cursor:not-allowed}
 
 <script>
 const SUPABASE_URL = "https://hofrfwjldbrfveufuvxu.supabase.co";
+
+// IMPORTANT: Keep your existing actual publishable key here.
+// Do not put your admin password or service-role key here.
 const SUPABASE_ANON_KEY = "sb_publishable_cdAswmtul4dLtyXvfIrWgQ_i42neFMJ";
 
 const client = supabase.createClient(
@@ -202,6 +220,10 @@ const client = supabase.createClient(
 const content=document.getElementById("content");
 const status=document.getElementById("status");
 
+let currentUser=null;
+let currentUsername="";
+let adminVerified=false;
+
 function showStatus(message,ok){
  status.textContent=message||"";
  status.className=ok?"ok":"";
@@ -212,6 +234,10 @@ function rupees(paise){
 }
 
 function showLogin(){
+ currentUser=null;
+ currentUsername="";
+ adminVerified=false;
+
  content.innerHTML=`
   <div class="auth-card">
    <div class="logo" style="margin:auto">✦</div>
@@ -297,7 +323,31 @@ function closeWithdrawModal(){
  if(modal)modal.classList.add("hidden");
 }
 
+function openAdminPassword(){
+ const modal=document.getElementById("adminPasswordModal");
+ if(modal)modal.classList.remove("hidden");
+ showStatus("");
+}
+
+function closeAdminPassword(){
+ const modal=document.getElementById("adminPasswordModal");
+ if(modal)modal.classList.add("hidden");
+}
+
+async function checkAdminPermission(){
+ const {data,error}=await client.rpc("is_admin");
+ if(error){
+  console.error("Admin check:",error.message);
+  return false;
+ }
+ return data===true;
+}
+
 async function showDashboard(username,user){
+ currentUser=user;
+ currentUsername=username;
+ adminVerified=false;
+
  content.innerHTML=`
   <header class="header">
    <div class="brand">
@@ -314,7 +364,8 @@ async function showDashboard(username,user){
      <button class="icon-btn" id="profileBtn" aria-label="Profile">👤</button>
      <div class="profile-menu hidden" id="profileMenu">
       <p id="menuUsername"></p>
-      <button id="menuLogout">Logout</button>
+      <button id="adminOption" class="hidden">Admin Dashboard</button>
+      <button id="menuLogout" class="logout-btn">Logout</button>
      </div>
     </div>
    </div>
@@ -392,22 +443,32 @@ async function showDashboard(username,user){
    <div class="activity">No activity yet</div>
   </section>
 
-  <!-- Withdrawal popup -->
   <div class="modal-overlay hidden" id="withdrawModal">
    <div class="modal">
     <div class="modal-header">
      <h3>Withdraw Request</h3>
-     <button class="close-btn" id="closeWithdraw" aria-label="Close">×</button>
+     <button class="close-btn" id="closeWithdraw">×</button>
     </div>
-
     <p class="muted">Enter your withdrawal amount and UPI ID.</p>
     <div class="modal-note">
      Minimum withdrawal ₹100. This sends a request only; it does not transfer money automatically.
     </div>
-
     <input id="wamount" type="number" min="100" placeholder="Amount (₹)">
     <input id="wupi" placeholder="UPI ID (name@bank)">
     <button class="action" id="withdrawSubmit">Send Request</button>
+   </div>
+  </div>
+
+  <div class="modal-overlay hidden" id="adminPasswordModal">
+   <div class="modal">
+    <div class="modal-header">
+     <h3>Admin Verification</h3>
+     <button class="close-btn" id="closeAdmin">×</button>
+    </div>
+    <p class="muted">Enter your admin password to continue.</p>
+    <input id="adminPassword" type="password" placeholder="Admin password" autocomplete="current-password">
+    <button class="action" id="adminLoginSubmit">Verify & Continue</button>
+    <p id="adminError" class="muted"></p>
    </div>
   </div>
 
@@ -427,12 +488,66 @@ async function showDashboard(username,user){
  const bal=document.getElementById("bal");
  bal.textContent=rupees(await getBalance(user));
 
+ // Show Admin option only if this account is in admin_users.
+ const isAdmin=await checkAdminPermission();
+ if(isAdmin){
+  document.getElementById("adminOption").classList.remove("hidden");
+ }
+
  document.getElementById("profileBtn").onclick=()=>{
   document.getElementById("profileMenu").classList.toggle("hidden");
  };
 
+ document.getElementById("adminOption").onclick=()=>{
+  document.getElementById("profileMenu").classList.add("hidden");
+  openAdminPassword();
+ };
+
+ document.getElementById("closeAdmin").onclick=closeAdminPassword;
+
+ document.getElementById("adminPasswordModal").onclick=(event)=>{
+  if(event.target.id==="adminPasswordModal")closeAdminPassword();
+ };
+
+ document.getElementById("adminLoginSubmit").onclick=async()=>{
+  const password=document.getElementById("adminPassword").value;
+  const btn=document.getElementById("adminLoginSubmit");
+  const errorBox=document.getElementById("adminError");
+
+  if(!password){
+   errorBox.textContent="Enter your password.";
+   return;
+  }
+
+  btn.disabled=true;
+  btn.textContent="Verifying...";
+  errorBox.textContent="";
+
+  try{
+   const {data,error}=await client.functions.invoke("admin_login",{
+    body:{password}
+   });
+
+   if(error||!data?.success){
+    errorBox.textContent=data?.error||error?.message||"Admin verification failed.";
+    return;
+   }
+
+   adminVerified=true;
+   closeAdminPassword();
+   document.getElementById("adminPassword").value="";
+   showAdminDashboard();
+  }catch(err){
+   errorBox.textContent="Unable to verify. Please try again.";
+  }finally{
+   btn.disabled=false;
+   btn.textContent="Verify & Continue";
+  }
+ };
+
  document.getElementById("menuLogout").onclick=async()=>{
   showStatus("Logging out...");
+  adminVerified=false;
   const {error}=await client.auth.signOut();
   if(error){
    showStatus(error.message);
@@ -535,7 +650,81 @@ async function showDashboard(username,user){
  });
 }
 
+function showAdminDashboard(){
+ if(!adminVerified||!currentUser){
+  showDashboard(currentUsername,currentUser);
+  return;
+ }
+
+ content.innerHTML=`
+  <header class="header">
+   <div class="brand">
+    <div class="logo">✦</div>
+    <div>
+     <h2>HYY EARN</h2>
+     <p>Administration</p>
+    </div>
+   </div>
+   <button class="icon-btn" id="adminProfile">👤</button>
+  </header>
+
+  <button class="back-btn" id="backUser">← User Dashboard</button>
+
+  <section class="admin-head">
+   <h2>Admin Dashboard</h2>
+   <p style="margin:0;opacity:.85;font-size:13px">Welcome, ${escapeHTML(currentUsername)}</p>
+  </section>
+
+  <section class="admin-item">
+   <h3>📋 Task Approvals</h3>
+   <p class="muted">Review user task submissions and approve or reject them.</p>
+   <span class="admin-tag">Next step · Not active</span>
+  </section>
+
+  <section class="admin-item">
+   <h3>➕ Create Tasks</h3>
+   <p class="muted">Add sponsored campaigns and publish tasks for users.</p>
+   <span class="admin-tag">Next step · Not active</span>
+  </section>
+
+  <section class="admin-item">
+   <h3>👥 Manage Users</h3>
+   <p class="muted">View registered users and their account information.</p>
+   <span class="admin-tag">Next step · Not active</span>
+  </section>
+
+  <section class="admin-item">
+   <h3>💸 Withdrawals</h3>
+   <p class="muted">Review withdrawal requests and update their status.</p>
+   <span class="admin-tag">Next step · Not active</span>
+  </section>
+
+  <section class="admin-item">
+   <h3>🔔 Notifications</h3>
+   <p class="muted">Manage user notifications and updates.</p>
+   <span class="admin-tag">Next step · Not active</span>
+  </section>
+ `;
+
+ document.getElementById("backUser").onclick=()=>{
+  adminVerified=false;
+  showDashboard(currentUsername,currentUser);
+ };
+
+ document.getElementById("adminProfile").onclick=()=>{
+  adminVerified=false;
+  showDashboard(currentUsername,currentUser);
+ };
+}
+
+function escapeHTML(value){
+ return String(value).replace(/[&<>"']/g,char=>({
+  "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+ }[char]));
+}
+
 async function loadUser(user){
+ currentUser=user;
  showStatus("Loading profile...");
 
  const {data:profile,error}=await client
@@ -552,7 +741,7 @@ async function loadUser(user){
  showStatus("");
 
  if(profile){
-  showDashboard(profile.username,user);
+  await showDashboard(profile.username,user);
  }else{
   showUsername(user);
  }
@@ -583,6 +772,7 @@ client.auth.onAuthStateChange((event,session)=>{
  if(session?.user&&event==="SIGNED_IN"){
   setTimeout(()=>{loadUser(session.user);},0);
  }else if(event==="SIGNED_OUT"){
+  adminVerified=false;
   showLogin();
  }
 });
