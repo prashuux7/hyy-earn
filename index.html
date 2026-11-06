@@ -4,105 +4,237 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>HYY EARN</title>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <style>
 *{box-sizing:border-box}
-body{margin:0;background:#f8f7f3;font-family:Arial;text-align:center;padding:30px 15px}
-.card{max-width:450px;margin:50px auto;background:white;padding:25px;border-radius:15px}
-h1{font-size:32px}h1 span{color:#d5a500}
-input,button{width:100%;padding:16px;margin:10px 0;border-radius:10px;font-size:17px}
+
+body{
+ margin:0;
+ background:#f8f7f3;
+ font-family:Arial,sans-serif;
+ padding:30px 15px;
+ text-align:center;
+}
+
+.card{
+ max-width:450px;
+ margin:50px auto;
+ background:white;
+ padding:28px;
+ border-radius:18px;
+ box-shadow:0 8px 30px rgba(0,0,0,.06);
+}
+
+h1{font-size:34px;margin-bottom:25px}
+h1 span{color:#d5a500}
+
+input,button{
+ width:100%;
+ padding:15px;
+ margin:10px 0;
+ border-radius:10px;
+ font-size:16px;
+}
+
 input{border:1px solid #ddd}
-button{background:#171717;color:white;border:0;cursor:pointer}
-#status{color:#c0392b}
+
+button{
+ background:#171717;
+ color:white;
+ border:0;
+ cursor:pointer;
+}
+
+button:disabled{opacity:.5}
+
+#status{
+ color:#c0392b;
+ font-size:14px;
+ overflow-wrap:anywhere;
+}
+
+.muted{color:#777;font-size:14px}
 </style>
 </head>
+
 <body>
+
 <div class="card">
-<h1>HYY <span>EARN</span></h1>
-<div id="content">Loading...</div>
-<p id="status"></p>
+ <h1>HYY <span>EARN</span></h1>
+ <div id="content">Loading...</div>
+ <p id="status"></p>
 </div>
 
 <script>
-const SUPABASE_URL = "https://hofrfwjldbrfveufuvxu.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_cdAswmtul4dLtyXvflrWgQ_i42neFMJ";
+const SUPABASE_URL =
+"https://hofrfwjldbrfveufuvxu.supabase.co";
 
-const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const SUPABASE_ANON_KEY =
+"sb_publishable_cdAswmtul4dLtyXvflrWgQ_i42neFMJ";
+
+const client = supabase.createClient(
+ SUPABASE_URL,
+ SUPABASE_ANON_KEY,
+ {
+  auth:{
+   persistSession:true,
+   autoRefreshToken:true,
+   detectSessionInUrl:true
+  }
+ }
+);
+
 const content = document.getElementById("content");
 const status = document.getElementById("status");
 
+function showStatus(message){
+ status.textContent = message || "";
+}
+
 function showLogin(){
  content.innerHTML = `
- <h3>Welcome to HYY EARN</h3>
- <p>Login with your Google account</p>
- <button id="login">Continue with Google</button>`;
+  <h3>Welcome to HYY EARN</h3>
+  <p class="muted">Login with your Google account</p>
+  <button id="login">Continue with Google</button>
+ `;
+
  document.getElementById("login").onclick = async()=>{
-  status.textContent="Connecting...";
-  const {error}=await client.auth.signInWithOAuth({
+  showStatus("Connecting...");
+
+  const {error} = await client.auth.signInWithOAuth({
    provider:"google",
-   options:{redirectTo:location.origin}
+   options:{
+    redirectTo:window.location.origin
+   }
   });
-  if(error) status.textContent=error.message;
+
+  if(error) showStatus(error.message);
  };
 }
 
 function showUsername(user){
- content.innerHTML=`
- <h3>Create your username</h3>
- <input id="username" placeholder="Enter username">
- <button id="save">Save Username</button>`;
- document.getElementById("save").onclick=async()=>{
-  const username=document.getElementById("username").value.trim();
+ content.innerHTML = `
+  <h3>Create your username</h3>
+  <p class="muted">Choose a unique username</p>
+  <input id="username" maxlength="20"
+   placeholder="Enter username">
+  <button id="save">Save Username</button>
+ `;
+
+ document.getElementById("save").onclick = async()=>{
+  const username =
+   document.getElementById("username").value.trim();
+
   if(!/^[a-zA-Z0-9_-]{3,20}$/.test(username)){
-   status.textContent="Use 3-20 letters, numbers or _ -";
+   showStatus("Use 3-20 letters, numbers, _ or -");
    return;
   }
-  status.textContent="Saving...";
-  const {error}=await client.from("profilea").insert({
-   id:user.id,username:username
-  });
+
+  const saveButton = document.getElementById("save");
+  saveButton.disabled = true;
+  showStatus("Saving...");
+
+  const {error} = await client
+   .from("profilea")
+   .insert({
+    id:user.id,
+    username:username
+   });
+
   if(error){
-   status.textContent=error.code==="23505"?"Username already taken":error.message;
+   saveButton.disabled = false;
+   showStatus(
+    error.code === "23505"
+     ? "Username already taken"
+     : error.message
+   );
    return;
   }
+
   showDashboard(username);
  };
 }
 
 function showDashboard(username){
- content.innerHTML=`
- <h2>Welcome, ${username}!</h2>
- <p>Account created successfully.</p>
- <p>HYY EARN Demo Platform</p>
- <button id="logout">Logout</button>`;
- document.getElementById("logout").onclick=async()=>{
-  await client.auth.signOut();
-  location.reload();
+ content.innerHTML = `
+  <h2 id="welcome"></h2>
+  <p>Account created successfully.</p>
+  <p class="muted">HYY EARN Demo Platform</p>
+  <button id="logout">Logout</button>
+ `;
+
+ document.getElementById("welcome").textContent =
+  "Welcome, " + username + "!";
+
+ document.getElementById("logout").onclick = async()=>{
+  showStatus("Logging out...");
+  const {error} = await client.auth.signOut();
+
+  if(error){
+   showStatus(error.message);
+   return;
+  }
+
+  showLogin();
+  showStatus("");
  };
 }
 
-async function checkLogin(){
- const {data,error}=await client.auth.getSession();
- if(error){status.textContent=error.message;return;}
- const user=data.session?.user;
- if(!user){showLogin();return;}
- const {data:profile,error:profileError}=await client
+async function loadUser(user){
+ showStatus("Loading profile...");
+
+ const {data:profile,error} = await client
   .from("profilea")
   .select("username")
   .eq("id",user.id)
   .maybeSingle();
 
- if(profileError){status.textContent=profileError.message;return;}
- if(profile){showDashboard(profile.username);}
- else{showUsername(user);}
+ if(error){
+  showStatus(error.message);
+  return;
+ }
+
+ showStatus("");
+
+ if(profile){
+  showDashboard(profile.username);
+ }else{
+  showUsername(user);
+ }
 }
 
-client.auth.onAuthStateChange((event, session) => {
-  if (session?.user) {
-    setTimeout(() => checkLogin(), 0);
-  } else {
-    showLogin();
-  }
+async function checkLogin(){
+ const {data,error} = await client.auth.getSession();
+
+ if(error){
+  showStatus(error.message);
+  return;
+ }
+
+ const user = data.session?.user;
+
+ if(!user){
+  showLogin();
+  return;
+ }
+
+ await loadUser(user);
+}
+
+client.auth.onAuthStateChange((event,session)=>{
+ if(session?.user){
+  setTimeout(()=>{
+   loadUser(session.user);
+  },0);
+ }else if(event === "SIGNED_OUT"){
+  showLogin();
+ }
 });
 
 checkLogin();
+</script>
+
+</body>
+</html>
