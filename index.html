@@ -9,52 +9,15 @@
 
 <style>
 *{box-sizing:border-box}
-
-body{
- margin:0;
- background:#f8f7f3;
- font-family:Arial,sans-serif;
- padding:30px 15px;
- text-align:center;
-}
-
-.card{
- max-width:450px;
- margin:50px auto;
- background:white;
- padding:28px;
- border-radius:18px;
- box-shadow:0 8px 30px rgba(0,0,0,.06);
-}
-
+body{margin:0;background:#f8f7f3;font-family:Arial,sans-serif;padding:30px 15px;text-align:center}
+.card{max-width:450px;margin:50px auto;background:white;padding:28px;border-radius:18px;box-shadow:0 8px 30px rgba(0,0,0,.06)}
 h1{font-size:34px;margin-bottom:25px}
 h1 span{color:#d5a500}
-
-input,button{
- width:100%;
- padding:15px;
- margin:10px 0;
- border-radius:10px;
- font-size:16px;
-}
-
+input,button{width:100%;padding:15px;margin:10px 0;border-radius:10px;font-size:16px}
 input{border:1px solid #ddd}
-
-button{
- background:#171717;
- color:white;
- border:0;
- cursor:pointer;
-}
-
+button{background:#171717;color:white;border:0;cursor:pointer}
 button:disabled{opacity:.5}
-
-#status{
- color:#c0392b;
- font-size:14px;
- overflow-wrap:anywhere;
-}
-
+#status{color:#c0392b;font-size:14px;overflow-wrap:anywhere}
 .muted{color:#777;font-size:14px}
 </style>
 </head>
@@ -65,32 +28,42 @@ button:disabled{opacity:.5}
  <h1>HYY <span>EARN</span></h1>
  <div id="content">Loading...</div>
  <p id="status"></p>
+ <p id="dbg" class="muted" style="overflow-wrap:anywhere"></p>
 </div>
 
 <script>
-const SUPABASE_URL =
-"https://hofrfwjldbrfveufuvxu.supabase.co";
+const SUPABASE_URL = "https://hofrfwjldbrfveufuvxu.supabase.co";
 
-const SUPABASE_ANON_KEY =
-"sb_publishable_cdAswmtul4dLtyXvflrWgQ_i42neFMJ";
+// Ikkada mee PUBLISHABLE key pettandi (sb_publishable_...)
+const SUPABASE_ANON_KEY = "sb_publishable_cdAswmtul4dLtyXvflrWgQ_i42neFMJ";
 
-const client = supabase.createClient(
- SUPABASE_URL,
- SUPABASE_ANON_KEY,
- {
-  auth:{
-   persistSession:true,
-   autoRefreshToken:true,
-   detectSessionInUrl:true
-  }
+const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+ auth:{
+  flowType:"pkce",
+  persistSession:true,
+  autoRefreshToken:true,
+  detectSessionInUrl:true
  }
-);
+});
 
 const content = document.getElementById("content");
 const status = document.getElementById("status");
+const dbg = document.getElementById("dbg");
 
 function showStatus(message){
  status.textContent = message || "";
+}
+
+dbg.textContent =
+ "key: " + (SUPABASE_ANON_KEY ? "set" : "EMPTY") +
+ " | hash token: " + location.hash.includes("access_token") +
+ " | code: " + location.search.includes("code=");
+
+const urlParams = new URLSearchParams(
+ location.hash.slice(1) + "&" + location.search.slice(1)
+);
+if(urlParams.get("error_description")){
+ showStatus(urlParams.get("error_description"));
 }
 
 function showLogin(){
@@ -102,14 +75,10 @@ function showLogin(){
 
  document.getElementById("login").onclick = async()=>{
   showStatus("Connecting...");
-
   const {error} = await client.auth.signInWithOAuth({
    provider:"google",
-   options:{
-    redirectTo:window.location.origin
-   }
+   options:{ redirectTo:window.location.origin }
   });
-
   if(error) showStatus(error.message);
  };
 }
@@ -118,14 +87,12 @@ function showUsername(user){
  content.innerHTML = `
   <h3>Create your username</h3>
   <p class="muted">Choose a unique username</p>
-  <input id="username" maxlength="20"
-   placeholder="Enter username">
+  <input id="username" maxlength="20" placeholder="Enter username">
   <button id="save">Save Username</button>
  `;
 
  document.getElementById("save").onclick = async()=>{
-  const username =
-   document.getElementById("username").value.trim();
+  const username = document.getElementById("username").value.trim();
 
   if(!/^[a-zA-Z0-9_-]{3,20}$/.test(username)){
    showStatus("Use 3-20 letters, numbers, _ or -");
@@ -138,21 +105,17 @@ function showUsername(user){
 
   const {error} = await client
    .from("profilea")
-   .insert({
-    id:user.id,
-    username:username
-   });
+   .insert({ id:user.id, username:username });
 
   if(error){
    saveButton.disabled = false;
    showStatus(
-    error.code === "23505"
-     ? "Username already taken"
-     : error.message
+    error.code === "23505" ? "Username already taken" : error.message
    );
    return;
   }
 
+  showStatus("");
   showDashboard(username);
  };
 }
@@ -165,18 +128,15 @@ function showDashboard(username){
   <button id="logout">Logout</button>
  `;
 
- document.getElementById("welcome").textContent =
-  "Welcome, " + username + "!";
+ document.getElementById("welcome").textContent = "Welcome, " + username + "!";
 
  document.getElementById("logout").onclick = async()=>{
   showStatus("Logging out...");
   const {error} = await client.auth.signOut();
-
   if(error){
    showStatus(error.message);
    return;
   }
-
   showLogin();
   showStatus("");
  };
@@ -210,6 +170,7 @@ async function checkLogin(){
 
  if(error){
   showStatus(error.message);
+  showLogin();
   return;
  }
 
@@ -224,10 +185,12 @@ async function checkLogin(){
 }
 
 client.auth.onAuthStateChange((event,session)=>{
- if(session?.user){
-  setTimeout(()=>{
-   loadUser(session.user);
-  },0);
+ dbg.textContent += " | " + event + ":" + (session ? "yes" : "no");
+
+ if(event === "INITIAL_SESSION") return;
+
+ if(session?.user && event === "SIGNED_IN"){
+  setTimeout(()=>{ loadUser(session.user); },0);
  }else if(event === "SIGNED_OUT"){
   showLogin();
  }
