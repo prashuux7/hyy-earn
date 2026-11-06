@@ -5,40 +5,149 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>HYY EARN</title>
-
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
 *{box-sizing:border-box}
-body{margin:0;background:#f8f7f3;font-family:Arial,sans-serif;padding:30px 15px;text-align:center}
-.card{max-width:450px;margin:50px auto;background:white;padding:28px;border-radius:18px;box-shadow:0 8px 30px rgba(0,0,0,.06)}
-h1{font-size:34px;margin-bottom:25px}
-h1 span{color:#d5a500}
-input,button{width:100%;padding:15px;margin:10px 0;border-radius:10px;font-size:16px}
-input{border:1px solid #ddd}
-button{background:#171717;color:white;border:0;cursor:pointer}
-button.alt{background:#d5a500;color:#171717}
-button.link{background:none;color:#777;font-size:14px;padding:8px}
-button:disabled{opacity:.5}
-#status{color:#c0392b;font-size:14px;overflow-wrap:anywhere}
-#status.ok{color:#2e8b57}
-.muted{color:#777;font-size:14px}
-.balance{background:#f8f7f3;border-radius:14px;padding:16px;margin:14px 0}
-.balance b{display:block;font-size:34px;color:#171717}
-.box{border-top:1px solid #eee;margin-top:18px;padding-top:6px}
-
-/* Available Tasks */
-.tasks{border-top:1px solid #eee;margin-top:20px;padding-top:15px;text-align:left}
-.task-empty{background:#f8f7f3;border-radius:12px;padding:20px;text-align:center;margin-top:12px}
-.task-empty p{margin:6px 0}
-.task-label{display:inline-block;background:#fff1bd;color:#806000;padding:6px 10px;border-radius:20px;font-size:12px}
+body{
+ margin:0;background:#f5eaff;color:#321064;
+ font-family:Arial,sans-serif;padding:18px 12px 90px;
+}
+.app{max-width:480px;margin:auto}
+.header{
+ display:flex;align-items:center;justify-content:space-between;
+ padding:12px 5px 20px;
+}
+.brand{display:flex;align-items:center;gap:10px}
+.logo{
+ width:43px;height:43px;border-radius:14px;
+ background:#7138c8;color:white;display:grid;place-items:center;
+ font-size:25px;font-weight:bold;
+}
+.brand h2{margin:0;font-size:20px}
+.brand p{margin:4px 0 0;color:#866ca8;font-size:11px}
+.icon-btn{
+ border:0;background:white;border-radius:13px;
+ width:43px;height:43px;font-size:20px;color:#7138c8;
+}
+.card{
+ background:white;border-radius:20px;padding:20px;
+ margin-bottom:15px;box-shadow:0 5px 20px rgba(75,30,120,.06);
+}
+.greeting{font-size:14px;color:#866ca8;margin:4px 0 5px}
+h2,h3,h4,p{margin-top:0}
+h2{font-size:22px;margin-bottom:15px}
+h3{font-size:17px;margin-bottom:8px}
+.muted{color:#947eac;font-size:13px;line-height:1.5}
+.wallet{
+ background:linear-gradient(135deg,#7138c8,#a45be8);
+ color:white;padding:23px;border-radius:22px;
+ margin-bottom:16px;box-shadow:0 8px 22px #7138c833;
+}
+.wallet-top{display:flex;justify-content:space-between;align-items:center}
+.wallet-label{font-size:13px;opacity:.85}
+.wallet-icon{font-size:25px}
+.amount{font-size:34px;font-weight:bold;margin:15px 0 18px}
+.wallet-bottom{display:flex;align-items:center;justify-content:space-between}
+.wallet-bottom small{opacity:.8}
+.primary-btn{
+ background:white;color:#7138c8;border:0;border-radius:12px;
+ padding:12px 17px;font-weight:bold;
+}
+.section-title{display:flex;justify-content:space-between;align-items:center}
+.section-title h3{margin:0 0 14px}
+.checkin{
+ display:flex;align-items:center;gap:13px;
+ background:#fff9e9;border:1px solid #f5e6bd;
+ border-radius:16px;padding:15px;
+}
+.check-icon{
+ width:43px;height:43px;border-radius:13px;
+ background:#ffe7a3;display:grid;place-items:center;font-size:22px;
+}
+.check-text{flex:1}
+.check-text h3{margin:0 0 4px;font-size:15px}
+.check-text p{margin:0;font-size:12px;color:#947eac}
+.check-btn{
+ border:0;border-radius:10px;padding:10px 13px;
+ background:#7138c8;color:white;font-weight:bold;
+}
+.grid{
+ display:grid;grid-template-columns:1fr 1fr;gap:12px;
+}
+.tile{
+ border:1px solid #f0e7fa;border-radius:16px;padding:17px;
+ background:#fff;text-align:left;min-height:105px;
+}
+.tile-icon{font-size:25px;margin-bottom:10px}
+.tile h4{font-size:14px;margin:0 0 5px}
+.tile p{font-size:11px;color:#947eac;margin:0}
+.coming{
+ background:#f5effc;border-radius:10px;padding:15px;
+ text-align:center;
+}
+.coming span{
+ display:inline-block;background:#eadbff;color:#7138c8;
+ border-radius:20px;padding:6px 11px;font-size:11px;
+}
+.coming h4{margin:12px 0 5px}
+.activity{
+ text-align:center;background:#faf7fd;padding:20px;
+ border-radius:13px;color:#947eac;font-size:13px;
+}
+.referral{
+ background:#f2e8ff;border-radius:16px;padding:18px;
+}
+.referral h3{margin-bottom:6px}
+.referral button{
+ margin-top:10px;background:#7138c8;color:white;
+ border:0;border-radius:10px;padding:11px 15px;
+}
+.bottom-nav{
+ position:fixed;bottom:0;left:0;right:0;
+ background:white;display:flex;justify-content:center;
+ box-shadow:0 -4px 20px #32106412;z-index:5;
+}
+.nav-inner{
+ width:100%;max-width:480px;display:flex;justify-content:space-around;
+ padding:10px 4px 13px;
+}
+.nav-item{
+ border:0;background:none;color:#947eac;font-size:11px;
+ display:flex;flex-direction:column;align-items:center;gap:4px;
+}
+.nav-item span{font-size:20px}
+.nav-item.active{color:#7138c8;font-weight:bold}
+input{
+ width:100%;padding:14px;border:1px solid #e6d9f2;
+ border-radius:11px;margin:8px 0;font-size:15px;
+}
+.action{
+ width:100%;padding:14px;border:0;border-radius:11px;
+ background:#7138c8;color:white;font-size:15px;font-weight:bold;
+ margin-top:8px;
+}
+#status{
+ text-align:center;color:#c0392b;font-size:13px;
+ overflow-wrap:anywhere;margin:12px 0;
+}
+#status.ok{color:#25834d}
+.auth-card{
+ max-width:450px;margin:65px auto;background:white;
+ padding:28px;border-radius:22px;text-align:center;
+ box-shadow:0 8px 30px #32106412;
+}
+.auth-card h1{font-size:32px}
+.auth-card h1 span{color:#a45be8}
+.link-btn{background:none;border:0;color:#947eac;padding:12px}
+button{cursor:pointer}
+button:disabled{opacity:.5;cursor:not-allowed}
+.hidden{display:none}
 </style>
 </head>
 
 <body>
-
-<div class="card">
- <h1>HYY <span>EARN</span></h1>
+<div class="app">
  <div id="content">Loading...</div>
  <p id="status"></p>
 </div>
@@ -47,189 +156,288 @@ button:disabled{opacity:.5}
 const SUPABASE_URL = "https://hofrfwjldbrfveufuvxu.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_cdAswmtul4dLtyXvfIrWgQ_i42neFMJ";
 
-const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
- auth:{
-  flowType:"pkce",
-  persistSession:true,
-  autoRefreshToken:true,
-  detectSessionInUrl:false
+const client = supabase.createClient(
+ SUPABASE_URL,
+ SUPABASE_ANON_KEY,
+ {
+  auth:{
+   flowType:"pkce",
+   persistSession:true,
+   autoRefreshToken:true,
+   detectSessionInUrl:false
+  }
  }
-});
+);
 
 const content = document.getElementById("content");
 const status = document.getElementById("status");
 
-function showStatus(message, ok){
- status.textContent = message || "";
- status.className = ok ? "ok" : "";
+function showStatus(message,ok){
+ status.textContent=message||"";
+ status.className=ok?"ok":"";
 }
 
 function rupees(paise){
- return "₹" + ((paise || 0) / 100).toFixed(2);
-}
-
-const urlParams = new URLSearchParams(
- location.hash.slice(1) + "&" + location.search.slice(1)
-);
-if(urlParams.get("error_description")){
- showStatus(urlParams.get("error_description"));
+ return "₹"+((paise||0)/100).toFixed(2);
 }
 
 function showLogin(){
- content.innerHTML = `
-  <h3>Welcome to HYY EARN</h3>
-  <p class="muted">Login with your Google account</p>
-  <button id="login">Continue with Google</button>
+ content.innerHTML=`
+  <div class="auth-card">
+   <div class="logo" style="margin:auto">✦</div>
+   <h1>HYY <span>EARN</span></h1>
+   <p class="muted">Complete · Earn · Redeem</p>
+   <h3>Welcome to HYY EARN</h3>
+   <p class="muted">Login with your Google account to continue.</p>
+   <button class="action" id="login">Continue with Google</button>
+  </div>
  `;
 
- document.getElementById("login").onclick = async()=>{
+ document.getElementById("login").onclick=async()=>{
   showStatus("Connecting...");
-  const {error} = await client.auth.signInWithOAuth({
+  const {error}=await client.auth.signInWithOAuth({
    provider:"google",
-   options:{ redirectTo:window.location.origin }
+   options:{redirectTo:window.location.origin}
   });
-  if(error) showStatus(error.message);
+  if(error)showStatus(error.message);
  };
 }
 
 function showUsername(user){
- content.innerHTML = `
-  <h3>Create your username</h3>
-  <p class="muted">Choose a unique username</p>
-  <input id="username" maxlength="20" placeholder="Enter username">
-  <button id="save">Save Username</button>
+ content.innerHTML=`
+  <div class="auth-card">
+   <h1>HYY <span>EARN</span></h1>
+   <h3>Create your username</h3>
+   <p class="muted">Choose a unique username.</p>
+   <input id="username" maxlength="20" placeholder="Enter username">
+   <button class="action" id="save">Save Username</button>
+  </div>
  `;
 
- document.getElementById("save").onclick = async()=>{
-  const username = document.getElementById("username").value.trim();
+ document.getElementById("save").onclick=async()=>{
+  const username=document.getElementById("username").value.trim();
 
   if(!/^[a-zA-Z0-9_-]{3,20}$/.test(username)){
    showStatus("Use 3-20 letters, numbers, _ or -");
    return;
   }
 
-  const saveButton = document.getElementById("save");
-  saveButton.disabled = true;
+  const btn=document.getElementById("save");
+  btn.disabled=true;
   showStatus("Saving...");
 
-  const {error} = await client
-   .from("profilea")
-   .insert({ id:user.id, username:username });
+  const {error}=await client.from("profilea").insert({
+   id:user.id,username:username
+  });
 
   if(error){
-   saveButton.disabled = false;
-   showStatus(
-    error.code === "23505" ? "Username already taken" : error.message
-   );
+   btn.disabled=false;
+   showStatus(error.code==="23505"?
+    "Username already taken":error.message);
    return;
   }
 
   showStatus("");
-  showDashboard(username, user);
+  showDashboard(username,user);
  };
 }
 
 async function getBalance(user){
- const {data} = await client
+ const {data,error}=await client
   .from("wallet")
   .select("balance_paise")
-  .eq("user_id", user.id)
+  .eq("user_id",user.id)
   .maybeSingle();
- return data ? data.balance_paise : 0;
+
+ if(error){
+  showStatus("Wallet: "+error.message);
+  return 0;
+ }
+ return data?data.balance_paise:0;
 }
 
-async function showDashboard(username, user){
- content.innerHTML = `
+async function showDashboard(username,user){
+ content.innerHTML=`
+  <header class="header">
+   <div class="brand">
+    <div class="logo">✦</div>
+    <div>
+     <h2>HYY EARN</h2>
+     <p>Complete · Earn · Redeem</p>
+    </div>
+   </div>
+   <button class="icon-btn" id="notifications" aria-label="Notifications">♧</button>
+  </header>
+
+  <p class="greeting">Welcome back,</p>
   <h2 id="welcome"></h2>
 
-  <div class="balance">
-   <span class="muted">Demo balance</span>
-   <b id="bal">...</b>
-  </div>
-
-  <button id="checkin" class="alt">Daily Check-in (+₹1)</button>
-
-  <!-- Available Tasks Section -->
-  <div class="tasks">
-   <h3>Available Tasks</h3>
-   <p class="muted">Complete tasks and earn rewards.</p>
-
-   <div class="task-empty">
-    <span class="task-label">Coming Soon</span>
-    <h4>No active tasks yet</h4>
-    <p class="muted">
-     New sponsored tasks will appear here after approval.
-    </p>
+  <section class="wallet">
+   <div class="wallet-top">
+    <span class="wallet-label">Your Wallet Balance</span>
+    <span class="wallet-icon">◈</span>
    </div>
-  </div>
+   <div class="amount" id="bal">...</div>
+   <div class="wallet-bottom">
+    <small>Available balance</small>
+    <button class="primary-btn" id="goWithdraw">Withdraw</button>
+   </div>
+  </section>
 
-  <div class="box">
-   <h3>Withdraw request</h3>
-   <p class="muted">Minimum ₹100. Demo stage lo idi request matrame.</p>
+  <section class="card">
+   <div class="section-title">
+    <h3>Daily Check-in</h3>
+    <span>🎁</span>
+   </div>
+   <div class="checkin">
+    <div class="check-icon">📅</div>
+    <div class="check-text">
+     <h3>Daily reward</h3>
+     <p>Check in every day</p>
+    </div>
+    <button class="check-btn" id="checkin">Check in</button>
+   </div>
+  </section>
+
+  <section class="card">
+   <div class="section-title"><h3>Earn More</h3></div>
+   <div class="grid">
+    <div class="tile">
+     <div class="tile-icon">📋</div>
+     <h4>Surveys</h4><p>Coming soon</p>
+    </div>
+    <div class="tile">
+     <div class="tile-icon">🎯</div>
+     <h4>Tasks</h4><p>Coming soon</p>
+    </div>
+    <div class="tile">
+     <div class="tile-icon">🎮</div>
+     <h4>Games</h4><p>Coming soon</p>
+    </div>
+    <div class="tile">
+     <div class="tile-icon">🎁</div>
+     <h4>Rewards</h4><p>Coming soon</p>
+    </div>
+   </div>
+  </section>
+
+  <section class="card">
+   <div class="section-title"><h3>Available Tasks</h3></div>
+   <div class="coming">
+    <span>Coming Soon</span>
+    <h4>No active tasks yet</h4>
+    <p class="muted">New sponsored tasks will appear here after approval.</p>
+   </div>
+  </section>
+
+  <section class="card">
+   <div class="referral">
+    <h3>Refer & Earn 🎉</h3>
+    <p class="muted">Referral rewards are coming soon.</p>
+   </div>
+  </section>
+
+  <section class="card">
+   <h3>Recent Activity</h3>
+   <div class="activity">No activity yet</div>
+  </section>
+
+  <section class="card" id="withdrawSection">
+   <h3>Withdraw Request</h3>
+   <p class="muted">Minimum ₹100. This sends a request only; it does not transfer money automatically.</p>
    <input id="wamount" type="number" min="100" placeholder="Amount (₹)">
    <input id="wupi" placeholder="UPI ID (name@bank)">
-   <button id="withdraw">Send Request</button>
-  </div>
+   <button class="action" id="withdraw">Send Request</button>
+  </section>
 
-  <p class="muted">HYY EARN Demo Platform</p>
-  <button id="logout" class="link">Logout</button>
+  <section class="card">
+   <h3>Profile</h3>
+   <p class="muted" id="profileName"></p>
+   <button class="link-btn" id="logout">Logout</button>
+  </section>
+
+  <nav class="bottom-nav">
+   <div class="nav-inner">
+    <button class="nav-item active" data-tab="home"><span>⌂</span>Home</button>
+    <button class="nav-item" data-tab="offers"><span>▣</span>Offers</button>
+    <button class="nav-item" data-tab="refer"><span>♧</span>Refer</button>
+    <button class="nav-item" data-tab="profile"><span>◉</span>Profile</button>
+   </div>
+  </nav>
  `;
 
- document.getElementById("welcome").textContent = "Welcome, " + username + "!";
+ document.getElementById("welcome").textContent=username+"!";
+ document.getElementById("profileName").textContent="Username: "+username;
 
- const bal = document.getElementById("bal");
- bal.textContent = rupees(await getBalance(user));
+ const bal=document.getElementById("bal");
+ bal.textContent=rupees(await getBalance(user));
 
- document.getElementById("checkin").onclick = async()=>{
-  const btn = document.getElementById("checkin");
-  btn.disabled = true;
+ document.getElementById("checkin").onclick=async()=>{
+  const btn=document.getElementById("checkin");
+  btn.disabled=true;
   showStatus("Checking in...");
-  const {data,error} = await client.rpc("daily_checkin");
-  btn.disabled = false;
+
+  const {data,error}=await client.rpc("daily_checkin");
+  btn.disabled=false;
+
   if(error){
-   showStatus(error.message.includes("Already")
-    ? "Ee roju check-in ayyindi. Repu malli randi!"
-    : error.message);
+   showStatus(error.message.includes("Already")?
+    "Ee roju check-in ayyindi. Repu malli randi!":error.message);
    return;
   }
-  bal.textContent = rupees(data);
-  showStatus("Check-in successful!", true);
+
+  bal.textContent=rupees(data);
+  showStatus("Check-in successful!",true);
  };
 
- document.getElementById("withdraw").onclick = async()=>{
-  const amount = Math.round(Number(document.getElementById("wamount").value) * 100);
-  const upi = document.getElementById("wupi").value.trim();
+ document.getElementById("withdraw").onclick=async()=>{
+  const amount=Math.round(
+   Number(document.getElementById("wamount").value)*100
+  );
+  const upi=document.getElementById("wupi").value.trim();
 
-  if(!amount || amount < 10000){
+  if(!amount||amount<10000){
    showStatus("Minimum withdrawal ₹100");
    return;
   }
+
   if(!/^[\w.\-]{2,}@[\w]{2,}$/.test(upi)){
    showStatus("Sariyaina UPI ID ivvandi (name@bank)");
    return;
   }
 
-  const btn = document.getElementById("withdraw");
-  btn.disabled = true;
+  const btn=document.getElementById("withdraw");
+  btn.disabled=true;
   showStatus("Sending...");
-  const {error} = await client.rpc("request_withdrawal",{
-   p_amount: amount,
-   p_upi: upi
+
+  const {error}=await client.rpc("request_withdrawal",{
+   p_amount:amount,
+   p_upi:upi
   });
-  btn.disabled = false;
+
+  btn.disabled=false;
 
   if(error){
    showStatus(error.message);
    return;
   }
 
-  bal.textContent = rupees(await getBalance(user));
-  showStatus("Request sent!", true);
+  bal.textContent=rupees(await getBalance(user));
+  showStatus("Request sent!",true);
  };
 
- document.getElementById("logout").onclick = async()=>{
+ document.getElementById("goWithdraw").onclick=()=>{
+  document.getElementById("withdrawSection")
+   .scrollIntoView({behavior:"smooth"});
+ };
+
+ document.getElementById("notifications").onclick=()=>{
+  showStatus("No notifications yet.");
+ };
+
+ document.getElementById("logout").onclick=async()=>{
   showStatus("Logging out...");
-  const {error} = await client.auth.signOut();
+  const {error}=await client.auth.signOut();
   if(error){
    showStatus(error.message);
    return;
@@ -237,12 +445,34 @@ async function showDashboard(username, user){
   showLogin();
   showStatus("");
  };
+
+ document.querySelectorAll(".nav-item").forEach(btn=>{
+  btn.onclick=()=>{
+   document.querySelectorAll(".nav-item").forEach(item=>
+    item.classList.remove("active")
+   );
+   btn.classList.add("active");
+
+   const tab=btn.dataset.tab;
+   if(tab==="home"){
+    window.scrollTo({top:0,behavior:"smooth"});
+   }else if(tab==="offers"){
+    document.querySelector(".card").scrollIntoView({behavior:"smooth"});
+    showStatus("Offers are coming soon.");
+   }else if(tab==="refer"){
+    document.querySelector(".referral").scrollIntoView({behavior:"smooth"});
+    showStatus("Referral feature is coming soon.");
+   }else if(tab==="profile"){
+    document.getElementById("profileName").scrollIntoView({behavior:"smooth"});
+   }
+  };
+ });
 }
 
 async function loadUser(user){
  showStatus("Loading profile...");
 
- const {data:profile,error} = await client
+ const {data:profile,error}=await client
   .from("profilea")
   .select("username")
   .eq("id",user.id)
@@ -256,14 +486,14 @@ async function loadUser(user){
  showStatus("");
 
  if(profile){
-  showDashboard(profile.username, user);
+  showDashboard(profile.username,user);
  }else{
   showUsername(user);
  }
 }
 
 async function checkLogin(){
- const {data,error} = await client.auth.getSession();
+ const {data,error}=await client.auth.getSession();
 
  if(error){
   showStatus(error.message);
@@ -271,7 +501,7 @@ async function checkLogin(){
   return;
  }
 
- const user = data.session?.user;
+ const user=data.session?.user;
 
  if(!user){
   showLogin();
@@ -282,28 +512,29 @@ async function checkLogin(){
 }
 
 client.auth.onAuthStateChange((event,session)=>{
- if(event === "INITIAL_SESSION") return;
+ if(event==="INITIAL_SESSION")return;
 
- if(session?.user && event === "SIGNED_IN"){
-  setTimeout(()=>{ loadUser(session.user); },0);
- }else if(event === "SIGNED_OUT"){
+ if(session?.user&&event==="SIGNED_IN"){
+  setTimeout(()=>{loadUser(session.user);},0);
+ }else if(event==="SIGNED_OUT"){
   showLogin();
  }
 });
 
 async function start(){
- const code = new URLSearchParams(location.search).get("code");
+ const code=new URLSearchParams(location.search).get("code");
+
  if(code){
   showStatus("Finishing login...");
-  const {error} = await client.auth.exchangeCodeForSession(code);
-  history.replaceState({}, "", location.pathname);
-  if(error) showStatus("Exchange error: " + error.message);
+  const {error}=await client.auth.exchangeCodeForSession(code);
+  history.replaceState({},"",location.pathname);
+  if(error)showStatus("Exchange error: "+error.message);
  }
- checkLogin();
+
+ await checkLogin();
 }
 
 start();
 </script>
-
 </body>
 </html>
