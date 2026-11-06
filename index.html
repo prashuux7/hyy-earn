@@ -524,7 +524,7 @@ async function showDashboard(username,user){
   errorBox.textContent="";
 
   try{
-   const {data,error}=await client.functions.invoke("smart-fuction",{
+   const {data,error}=await client.functions.invoke("smart-function",{
     body:{password}
    });
 
