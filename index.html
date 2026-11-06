@@ -33,8 +33,6 @@ button:disabled{opacity:.5}
 
 <script>
 const SUPABASE_URL = "https://hofrfwjldbrfveufuvxu.supabase.co";
-
-// Ikkada mee PUBLISHABLE key pettandi (sb_publishable_...)
 const SUPABASE_ANON_KEY = "sb_publishable_cdAswmtul4dLtyXvflrWgQ_i42neFMJ";
 
 const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -42,7 +40,7 @@ const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   flowType:"pkce",
   persistSession:true,
   autoRefreshToken:true,
-  detectSessionInUrl:true
+  detectSessionInUrl:false
  }
 });
 
@@ -196,7 +194,18 @@ client.auth.onAuthStateChange((event,session)=>{
  }
 });
 
-checkLogin();
+async function start(){
+ const code = new URLSearchParams(location.search).get("code");
+ if(code){
+  showStatus("Finishing login...");
+  const {error} = await client.auth.exchangeCodeForSession(code);
+  history.replaceState({}, "", location.pathname);
+  if(error) showStatus("Exchange error: " + error.message);
+ }
+ checkLogin();
+}
+
+start();
 </script>
 
 </body>
