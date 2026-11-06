@@ -33,7 +33,7 @@ function showUsernameForm(user) {
     msg.textContent = "Saving...";
 
     const { error } = await client
-      .from("profilea")
+      .from("profiles")
       .insert({ id: user.id, username });
 
     if (error) {
