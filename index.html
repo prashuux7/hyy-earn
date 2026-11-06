@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -25,6 +26,12 @@ button:disabled{opacity:.5}
 .balance{background:#f8f7f3;border-radius:14px;padding:16px;margin:14px 0}
 .balance b{display:block;font-size:34px;color:#171717}
 .box{border-top:1px solid #eee;margin-top:18px;padding-top:6px}
+
+/* Available Tasks */
+.tasks{border-top:1px solid #eee;margin-top:20px;padding-top:15px;text-align:left}
+.task-empty{background:#f8f7f3;border-radius:12px;padding:20px;text-align:center;margin-top:12px}
+.task-empty p{margin:6px 0}
+.task-label{display:inline-block;background:#fff1bd;color:#806000;padding:6px 10px;border-radius:20px;font-size:12px}
 </style>
 </head>
 
@@ -134,11 +141,27 @@ async function getBalance(user){
 async function showDashboard(username, user){
  content.innerHTML = `
   <h2 id="welcome"></h2>
+
   <div class="balance">
    <span class="muted">Demo balance</span>
    <b id="bal">...</b>
   </div>
+
   <button id="checkin" class="alt">Daily Check-in (+₹1)</button>
+
+  <!-- Available Tasks Section -->
+  <div class="tasks">
+   <h3>Available Tasks</h3>
+   <p class="muted">Complete tasks and earn rewards.</p>
+
+   <div class="task-empty">
+    <span class="task-label">Coming Soon</span>
+    <h4>No active tasks yet</h4>
+    <p class="muted">
+     New sponsored tasks will appear here after approval.
+    </p>
+   </div>
+  </div>
 
   <div class="box">
    <h3>Withdraw request</h3>
