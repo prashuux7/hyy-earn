@@ -16,9 +16,15 @@ h1 span{color:#d5a500}
 input,button{width:100%;padding:15px;margin:10px 0;border-radius:10px;font-size:16px}
 input{border:1px solid #ddd}
 button{background:#171717;color:white;border:0;cursor:pointer}
+button.alt{background:#d5a500;color:#171717}
+button.link{background:none;color:#777;font-size:14px;padding:8px}
 button:disabled{opacity:.5}
 #status{color:#c0392b;font-size:14px;overflow-wrap:anywhere}
+#status.ok{color:#2e8b57}
 .muted{color:#777;font-size:14px}
+.balance{background:#f8f7f3;border-radius:14px;padding:16px;margin:14px 0}
+.balance b{display:block;font-size:34px;color:#171717}
+.box{border-top:1px solid #eee;margin-top:18px;padding-top:6px}
 </style>
 </head>
 
@@ -32,7 +38,7 @@ button:disabled{opacity:.5}
 
 <script>
 const SUPABASE_URL = "https://hofrfwjldbrfveufuvxu.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_cdAswmtul4dLtyXvfIrWgQ_i42neFMJ";
+const SUPABASE_ANON_KEY = "sb_publishable_cdAswmtul4dLtyXvflrWgQ_i42neFMJ";
 
 const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
  auth:{
@@ -46,8 +52,13 @@ const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 const content = document.getElementById("content");
 const status = document.getElementById("status");
 
-function showStatus(message){
+function showStatus(message, ok){
  status.textContent = message || "";
+ status.className = ok ? "ok" : "";
+}
+
+function rupees(paise){
+ return "₹" + ((paise || 0) / 100).toFixed(2);
 }
 
 const urlParams = new URLSearchParams(
@@ -107,19 +118,91 @@ function showUsername(user){
   }
 
   showStatus("");
-  showDashboard(username);
+  showDashboard(username, user);
  };
 }
 
-function showDashboard(username){
+async function getBalance(user){
+ const {data} = await client
+  .from("wallet")
+  .select("balance_paise")
+  .eq("user_id", user.id)
+  .maybeSingle();
+ return data ? data.balance_paise : 0;
+}
+
+async function showDashboard(username, user){
  content.innerHTML = `
   <h2 id="welcome"></h2>
-  <p>Account created successfully.</p>
+  <div class="balance">
+   <span class="muted">Demo balance</span>
+   <b id="bal">...</b>
+  </div>
+  <button id="checkin" class="alt">Daily Check-in (+₹1)</button>
+
+  <div class="box">
+   <h3>Withdraw request</h3>
+   <p class="muted">Minimum ₹100. Demo stage lo idi request matrame.</p>
+   <input id="wamount" type="number" min="100" placeholder="Amount (₹)">
+   <input id="wupi" placeholder="UPI ID (name@bank)">
+   <button id="withdraw">Send Request</button>
+  </div>
+
   <p class="muted">HYY EARN Demo Platform</p>
-  <button id="logout">Logout</button>
+  <button id="logout" class="link">Logout</button>
  `;
 
  document.getElementById("welcome").textContent = "Welcome, " + username + "!";
+
+ const bal = document.getElementById("bal");
+ bal.textContent = rupees(await getBalance(user));
+
+ document.getElementById("checkin").onclick = async()=>{
+  const btn = document.getElementById("checkin");
+  btn.disabled = true;
+  showStatus("Checking in...");
+  const {data,error} = await client.rpc("daily_checkin");
+  btn.disabled = false;
+  if(error){
+   showStatus(error.message.includes("Already")
+    ? "Ee roju check-in ayyindi. Repu malli randi!"
+    : error.message);
+   return;
+  }
+  bal.textContent = rupees(data);
+  showStatus("Check-in successful!", true);
+ };
+
+ document.getElementById("withdraw").onclick = async()=>{
+  const amount = Math.round(Number(document.getElementById("wamount").value) * 100);
+  const upi = document.getElementById("wupi").value.trim();
+
+  if(!amount || amount < 10000){
+   showStatus("Minimum withdrawal ₹100");
+   return;
+  }
+  if(!/^[\w.\-]{2,}@[\w]{2,}$/.test(upi)){
+   showStatus("Sariyaina UPI ID ivvandi (name@bank)");
+   return;
+  }
+
+  const btn = document.getElementById("withdraw");
+  btn.disabled = true;
+  showStatus("Sending...");
+  const {error} = await client.rpc("request_withdrawal",{
+   p_amount: amount,
+   p_upi: upi
+  });
+  btn.disabled = false;
+
+  if(error){
+   showStatus(error.message);
+   return;
+  }
+
+  bal.textContent = rupees(await getBalance(user));
+  showStatus("Request sent!", true);
+ };
 
  document.getElementById("logout").onclick = async()=>{
   showStatus("Logging out...");
@@ -150,7 +233,7 @@ async function loadUser(user){
  showStatus("");
 
  if(profile){
-  showDashboard(profile.username);
+  showDashboard(profile.username, user);
  }else{
   showUsername(user);
  }
