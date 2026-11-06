@@ -26,10 +26,24 @@ body{
 }
 .brand h2{margin:0;font-size:20px}
 .brand p{margin:4px 0 0;color:#866ca8;font-size:11px}
+.header-actions{display:flex;gap:8px;align-items:center}
 .icon-btn{
  border:0;background:white;border-radius:13px;
  width:43px;height:43px;font-size:20px;color:#7138c8;
 }
+.profile-wrap{position:relative}
+.profile-menu{
+ position:absolute;right:0;top:52px;width:190px;
+ background:white;padding:15px;border-radius:14px;
+ box-shadow:0 5px 25px #32106425;z-index:10;
+ text-align:left;
+}
+.profile-menu p{font-size:13px;overflow-wrap:anywhere;margin:0 0 12px}
+.profile-menu button{
+ width:100%;padding:11px;border:0;border-radius:9px;
+ background:#7138c8;color:white;
+}
+.hidden{display:none!important}
 .card{
  background:white;border-radius:20px;padding:20px;
  margin-bottom:15px;box-shadow:0 5px 20px rgba(75,30,120,.06);
@@ -72,9 +86,7 @@ h3{font-size:17px;margin-bottom:8px}
  border:0;border-radius:10px;padding:10px 13px;
  background:#7138c8;color:white;font-weight:bold;
 }
-.grid{
- display:grid;grid-template-columns:1fr 1fr;gap:12px;
-}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .tile{
  border:1px solid #f0e7fa;border-radius:16px;padding:17px;
  background:#fff;text-align:left;min-height:105px;
@@ -83,8 +95,7 @@ h3{font-size:17px;margin-bottom:8px}
 .tile h4{font-size:14px;margin:0 0 5px}
 .tile p{font-size:11px;color:#947eac;margin:0}
 .coming{
- background:#f5effc;border-radius:10px;padding:15px;
- text-align:center;
+ background:#f5effc;border-radius:10px;padding:15px;text-align:center;
 }
 .coming span{
  display:inline-block;background:#eadbff;color:#7138c8;
@@ -95,14 +106,8 @@ h3{font-size:17px;margin-bottom:8px}
  text-align:center;background:#faf7fd;padding:20px;
  border-radius:13px;color:#947eac;font-size:13px;
 }
-.referral{
- background:#f2e8ff;border-radius:16px;padding:18px;
-}
+.referral{background:#f2e8ff;border-radius:16px;padding:18px}
 .referral h3{margin-bottom:6px}
-.referral button{
- margin-top:10px;background:#7138c8;color:white;
- border:0;border-radius:10px;padding:11px 15px;
-}
 .bottom-nav{
  position:fixed;bottom:0;left:0;right:0;
  background:white;display:flex;justify-content:center;
@@ -118,14 +123,14 @@ h3{font-size:17px;margin-bottom:8px}
 }
 .nav-item span{font-size:20px}
 .nav-item.active{color:#7138c8;font-weight:bold}
-input{
- width:100%;padding:14px;border:1px solid #e6d9f2;
- border-radius:11px;margin:8px 0;font-size:15px;
-}
 .action{
  width:100%;padding:14px;border:0;border-radius:11px;
  background:#7138c8;color:white;font-size:15px;font-weight:bold;
  margin-top:8px;
+}
+input{
+ width:100%;padding:14px;border:1px solid #e6d9f2;
+ border-radius:11px;margin:8px 0;font-size:15px;
 }
 #status{
  text-align:center;color:#c0392b;font-size:13px;
@@ -142,7 +147,32 @@ input{
 .link-btn{background:none;border:0;color:#947eac;padding:12px}
 button{cursor:pointer}
 button:disabled{opacity:.5;cursor:not-allowed}
-.hidden{display:none}
+
+/* Withdrawal popup */
+.modal-overlay{
+ position:fixed;inset:0;background:rgba(30,12,50,.55);
+ display:flex;align-items:center;justify-content:center;
+ padding:18px;z-index:20;
+}
+.modal{
+ width:100%;max-width:400px;background:white;
+ border-radius:22px;padding:23px;
+ box-shadow:0 10px 35px #0003;
+}
+.modal-header{
+ display:flex;justify-content:space-between;align-items:center;
+ margin-bottom:12px;
+}
+.modal-header h3{font-size:20px;margin:0}
+.close-btn{
+ border:0;background:#f3eafa;color:#7138c8;
+ width:36px;height:36px;border-radius:10px;font-size:20px;
+}
+.modal-note{
+ background:#f5effc;border-radius:12px;padding:12px;
+ font-size:12px;color:#80669d;line-height:1.5;
+ margin:10px 0;
+}
 </style>
 </head>
 
@@ -169,8 +199,8 @@ const client = supabase.createClient(
  }
 );
 
-const content = document.getElementById("content");
-const status = document.getElementById("status");
+const content=document.getElementById("content");
+const status=document.getElementById("status");
 
 function showStatus(message,ok){
  status.textContent=message||"";
@@ -256,6 +286,17 @@ async function getBalance(user){
  return data?data.balance_paise:0;
 }
 
+function openWithdrawModal(){
+ const modal=document.getElementById("withdrawModal");
+ if(modal)modal.classList.remove("hidden");
+ showStatus("");
+}
+
+function closeWithdrawModal(){
+ const modal=document.getElementById("withdrawModal");
+ if(modal)modal.classList.add("hidden");
+}
+
 async function showDashboard(username,user){
  content.innerHTML=`
   <header class="header">
@@ -266,7 +307,17 @@ async function showDashboard(username,user){
      <p>Complete · Earn · Redeem</p>
     </div>
    </div>
-   <button class="icon-btn" id="notifications" aria-label="Notifications">♧</button>
+
+   <div class="header-actions">
+    <button class="icon-btn" id="notifications" aria-label="Notifications">♧</button>
+    <div class="profile-wrap">
+     <button class="icon-btn" id="profileBtn" aria-label="Profile">👤</button>
+     <div class="profile-menu hidden" id="profileMenu">
+      <p id="menuUsername"></p>
+      <button id="menuLogout">Logout</button>
+     </div>
+    </div>
+   </div>
   </header>
 
   <p class="greeting">Welcome back,</p>
@@ -286,8 +337,7 @@ async function showDashboard(username,user){
 
   <section class="card">
    <div class="section-title">
-    <h3>Daily Check-in</h3>
-    <span>🎁</span>
+    <h3>Daily Check-in</h3><span>🎁</span>
    </div>
    <div class="checkin">
     <div class="check-icon">📅</div>
@@ -322,7 +372,7 @@ async function showDashboard(username,user){
   </section>
 
   <section class="card">
-   <div class="section-title"><h3>Available Tasks</h3></div>
+   <h3>Available Tasks</h3>
    <div class="coming">
     <span>Coming Soon</span>
     <h4>No active tasks yet</h4>
@@ -342,19 +392,24 @@ async function showDashboard(username,user){
    <div class="activity">No activity yet</div>
   </section>
 
-  <section class="card" id="withdrawSection">
-   <h3>Withdraw Request</h3>
-   <p class="muted">Minimum ₹100. This sends a request only; it does not transfer money automatically.</p>
-   <input id="wamount" type="number" min="100" placeholder="Amount (₹)">
-   <input id="wupi" placeholder="UPI ID (name@bank)">
-   <button class="action" id="withdraw">Send Request</button>
-  </section>
+  <!-- Withdrawal popup -->
+  <div class="modal-overlay hidden" id="withdrawModal">
+   <div class="modal">
+    <div class="modal-header">
+     <h3>Withdraw Request</h3>
+     <button class="close-btn" id="closeWithdraw" aria-label="Close">×</button>
+    </div>
 
-  <section class="card">
-   <h3>Profile</h3>
-   <p class="muted" id="profileName"></p>
-   <button class="link-btn" id="logout">Logout</button>
-  </section>
+    <p class="muted">Enter your withdrawal amount and UPI ID.</p>
+    <div class="modal-note">
+     Minimum withdrawal ₹100. This sends a request only; it does not transfer money automatically.
+    </div>
+
+    <input id="wamount" type="number" min="100" placeholder="Amount (₹)">
+    <input id="wupi" placeholder="UPI ID (name@bank)">
+    <button class="action" id="withdrawSubmit">Send Request</button>
+   </div>
+  </div>
 
   <nav class="bottom-nav">
    <div class="nav-inner">
@@ -367,10 +422,36 @@ async function showDashboard(username,user){
  `;
 
  document.getElementById("welcome").textContent=username+"!";
- document.getElementById("profileName").textContent="Username: "+username;
+ document.getElementById("menuUsername").textContent="Username: "+username;
 
  const bal=document.getElementById("bal");
  bal.textContent=rupees(await getBalance(user));
+
+ document.getElementById("profileBtn").onclick=()=>{
+  document.getElementById("profileMenu").classList.toggle("hidden");
+ };
+
+ document.getElementById("menuLogout").onclick=async()=>{
+  showStatus("Logging out...");
+  const {error}=await client.auth.signOut();
+  if(error){
+   showStatus(error.message);
+   return;
+  }
+  showLogin();
+  showStatus("");
+ };
+
+ document.getElementById("notifications").onclick=()=>{
+  showStatus("No notifications yet.");
+ };
+
+ document.getElementById("goWithdraw").onclick=openWithdrawModal;
+ document.getElementById("closeWithdraw").onclick=closeWithdrawModal;
+
+ document.getElementById("withdrawModal").onclick=(event)=>{
+  if(event.target.id==="withdrawModal")closeWithdrawModal();
+ };
 
  document.getElementById("checkin").onclick=async()=>{
   const btn=document.getElementById("checkin");
@@ -390,7 +471,7 @@ async function showDashboard(username,user){
   showStatus("Check-in successful!",true);
  };
 
- document.getElementById("withdraw").onclick=async()=>{
+ document.getElementById("withdrawSubmit").onclick=async()=>{
   const amount=Math.round(
    Number(document.getElementById("wamount").value)*100
   );
@@ -406,7 +487,7 @@ async function showDashboard(username,user){
    return;
   }
 
-  const btn=document.getElementById("withdraw");
+  const btn=document.getElementById("withdrawSubmit");
   btn.disabled=true;
   showStatus("Sending...");
 
@@ -423,27 +504,10 @@ async function showDashboard(username,user){
   }
 
   bal.textContent=rupees(await getBalance(user));
+  closeWithdrawModal();
+  document.getElementById("wamount").value="";
+  document.getElementById("wupi").value="";
   showStatus("Request sent!",true);
- };
-
- document.getElementById("goWithdraw").onclick=()=>{
-  document.getElementById("withdrawSection")
-   .scrollIntoView({behavior:"smooth"});
- };
-
- document.getElementById("notifications").onclick=()=>{
-  showStatus("No notifications yet.");
- };
-
- document.getElementById("logout").onclick=async()=>{
-  showStatus("Logging out...");
-  const {error}=await client.auth.signOut();
-  if(error){
-   showStatus(error.message);
-   return;
-  }
-  showLogin();
-  showStatus("");
  };
 
  document.querySelectorAll(".nav-item").forEach(btn=>{
@@ -454,6 +518,7 @@ async function showDashboard(username,user){
    btn.classList.add("active");
 
    const tab=btn.dataset.tab;
+
    if(tab==="home"){
     window.scrollTo({top:0,behavior:"smooth"});
    }else if(tab==="offers"){
@@ -463,7 +528,8 @@ async function showDashboard(username,user){
     document.querySelector(".referral").scrollIntoView({behavior:"smooth"});
     showStatus("Referral feature is coming soon.");
    }else if(tab==="profile"){
-    document.getElementById("profileName").scrollIntoView({behavior:"smooth"});
+    document.getElementById("profileBtn").click();
+    window.scrollTo({top:0,behavior:"smooth"});
    }
   };
  });
