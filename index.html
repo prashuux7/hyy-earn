@@ -97,7 +97,12 @@ async function checkLogin(){
  else{showUsername(user);}
 }
 
+client.auth.onAuthStateChange((event, session) => {
+  if (session?.user) {
+    setTimeout(() => checkLogin(), 0);
+  } else {
+    showLogin();
+  }
+});
+
 checkLogin();
-</script>
-</body>
-</html>
