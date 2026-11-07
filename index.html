@@ -6,7 +6,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>HYY EARN</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
 <style>
 *{box-sizing:border-box}
 body{margin:0;background:#f5eaff;color:#321064;font-family:Arial,sans-serif;padding:18px 12px 90px}
@@ -90,9 +89,12 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .task-row p{font-size:12px;color:#947eac;margin:5px 0}
 .task-status{display:inline-block;font-size:11px;color:#7138c8;background:#f1e8fc;padding:5px 9px;border-radius:15px}
 .task-link{display:inline-block;margin-top:10px;color:#7138c8;font-weight:bold;font-size:13px;text-decoration:none}
+.task-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:12px}
+.small-btn{border:0;border-radius:9px;padding:10px 6px;font-weight:bold;background:#eee3f8;color:#7138c8;font-size:12px}
+.small-btn.delete{background:#ffe9e9;color:#bd3434}
+.small-btn.pause{background:#fff2d9;color:#9b6810}
 </style>
 </head>
-
 <body>
 <div class="app">
  <div id="content">Loading...</div>
@@ -101,29 +103,14 @@ button:disabled{opacity:.5;cursor:not-allowed}
 
 <script>
 const SUPABASE_URL="https://hofrfwjldbrfveufuvxu.supabase.co";
-
-/* IMPORTANT:
-   Paste your existing Supabase publishable key below.
-   Do not use a service_role key here.
-*/
 const SUPABASE_ANON_KEY="sb_publishable_cdAswmtul4dLtyXvfIrWgQ_i42neFMJ";
 
-const client=supabase.createClient(
- SUPABASE_URL,
- SUPABASE_ANON_KEY,
- {
-  auth:{
-   flowType:"pkce",
-   persistSession:true,
-   autoRefreshToken:true,
-   detectSessionInUrl:false
-  }
- }
-);
+const client=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{
+ auth:{flowType:"pkce",persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}
+});
 
 const content=document.getElementById("content");
 const status=document.getElementById("status");
-
 let currentUser=null;
 let currentUsername="";
 let adminVerified=false;
@@ -132,38 +119,28 @@ function showStatus(message,ok){
  status.textContent=message||"";
  status.className=ok?"ok":"";
 }
-
-function rupees(paise){
- return "₹"+((paise||0)/100).toFixed(2);
-}
-
+function rupees(paise){return "₹"+((paise||0)/100).toFixed(2)}
 function escapeHTML(value){
  return String(value??"").replace(/[&<>"']/g,char=>({
-  "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
  }[char]));
 }
 
 function showLogin(){
- currentUser=null;
- currentUsername="";
- adminVerified=false;
-
+ currentUser=null;currentUsername="";adminVerified=false;
  content.innerHTML=`
-  <div class="auth-card">
-   <div class="logo" style="margin:auto">✦</div>
-   <h1>HYY <span>EARN</span></h1>
-   <p class="muted">Complete · Earn · Redeem</p>
-   <h3>Welcome to HYY EARN</h3>
-   <p class="muted">Login with your Google account to continue.</p>
-   <button class="action" id="login">Continue with Google</button>
-  </div>
- `;
-
+ <div class="auth-card">
+  <div class="logo" style="margin:auto">✦</div>
+  <h1>HYY <span>EARN</span></h1>
+  <p class="muted">Complete · Earn · Redeem</p>
+  <h3>Welcome to HYY EARN</h3>
+  <p class="muted">Login with your Google account to continue.</p>
+  <button class="action" id="login">Continue with Google</button>
+ </div>`;
  document.getElementById("login").onclick=async()=>{
   showStatus("Connecting...");
   const {error}=await client.auth.signInWithOAuth({
-   provider:"google",
-   options:{redirectTo:window.location.origin}
+   provider:"google",options:{redirectTo:window.location.origin}
   });
   if(error)showStatus(error.message);
  };
@@ -171,372 +148,193 @@ function showLogin(){
 
 function showUsername(user){
  content.innerHTML=`
-  <div class="auth-card">
-   <h1>HYY <span>EARN</span></h1>
-   <h3>Create your username</h3>
-   <p class="muted">Choose a unique username.</p>
-   <input id="username" maxlength="20" placeholder="Enter username">
-   <button class="action" id="save">Save Username</button>
-  </div>
- `;
-
+ <div class="auth-card">
+  <h1>HYY <span>EARN</span></h1>
+  <h3>Create your username</h3>
+  <p class="muted">Choose a unique username.</p>
+  <input id="username" maxlength="20" placeholder="Enter username">
+  <button class="action" id="save">Save Username</button>
+ </div>`;
  document.getElementById("save").onclick=async()=>{
   const username=document.getElementById("username").value.trim();
-
   if(!/^[a-zA-Z0-9_-]{3,20}$/.test(username)){
-   showStatus("Use 3-20 letters, numbers, _ or -");
-   return;
+   showStatus("Use 3-20 letters, numbers, _ or -");return;
   }
-
   const btn=document.getElementById("save");
-  btn.disabled=true;
-  showStatus("Saving...");
-
-  const {error}=await client.from("profilea").insert({
-   id:user.id,username:username
-  });
-
+  btn.disabled=true;showStatus("Saving...");
+  const {error}=await client.from("profilea").insert({id:user.id,username});
   if(error){
    btn.disabled=false;
-   showStatus(error.code==="23505"?"Username already taken":error.message);
-   return;
+   showStatus(error.code==="23505"?"Username already taken":error.message);return;
   }
-
-  showStatus("");
-  showDashboard(username,user);
+  showStatus("");showDashboard(username,user);
  };
 }
 
 async function getBalance(user){
- const {data,error}=await client.from("wallet")
-  .select("balance_paise")
-  .eq("user_id",user.id)
-  .maybeSingle();
-
- if(error){
-  showStatus("Wallet: "+error.message);
-  return 0;
- }
+ const {data,error}=await client.from("wallet").select("balance_paise").eq("user_id",user.id).maybeSingle();
+ if(error){showStatus("Wallet: "+error.message);return 0}
  return data?data.balance_paise:0;
 }
 
-/* USER DASHBOARD: LOAD PUBLISHED TASKS */
-async function loadPublishedTasks(user){
+async function loadPublishedTasks(){
  const list=document.getElementById("availableTasks");
  if(!list)return;
-
  list.textContent="Loading available tasks...";
-
  const {data:tasks,error}=await client.from("tasks")
   .select("id,title,description,category,reward_paise,task_url")
-  .eq("status","published")
-  .order("created_at",{ascending:false});
-
- if(error){
-  list.textContent="Unable to load tasks. Please try again.";
-  console.error("Published tasks:",error.message);
-  return;
+  .eq("status","published").order("created_at",{ascending:false});
+ if(error){list.textContent="Unable to load tasks. Please try again.";return}
+ if(!tasks||!tasks.length){
+  list.innerHTML=`<div class="coming"><span>No active tasks</span><h4>New tasks coming soon!</h4><p class="muted">Please check again later.</p></div>`;return;
  }
-
- if(!tasks||tasks.length===0){
-  list.innerHTML=`
-   <div class="coming">
-    <span>No active tasks</span>
-    <h4>New tasks coming soon!</h4>
-    <p class="muted">Please check again later.</p>
-   </div>`;
-  return;
- }
-
  list.innerHTML=tasks.map(task=>{
-  let taskLink="";
-
+  let link="";
   if(task.task_url){
    try{
     const url=new URL(task.task_url);
-    if(url.protocol==="https:"||url.protocol==="http:"){
-     taskLink=`
-      <a class="task-link"
-       href="${escapeHTML(url.href)}"
-       target="_blank"
-       rel="noopener noreferrer">
-       Open Task →
-      </a>`;
+    if(["https:","http:"].includes(url.protocol)){
+     link=`<a class="task-link" href="${escapeHTML(url.href)}" target="_blank" rel="noopener noreferrer">Open Task →</a>`;
     }
    }catch{}
   }
-
-  return `
-   <div class="task-row">
-    <h4>${escapeHTML(task.title)}</h4>
-    <p>${escapeHTML(task.description||"No description")}</p>
-    <p>Category: ${escapeHTML(task.category)}</p>
-    <p>Listed reward: ${rupees(task.reward_paise)}</p>
-    ${taskLink}
-   </div>
-  `;
+  return `<div class="task-row">
+   <h4>${escapeHTML(task.title)}</h4>
+   <p>${escapeHTML(task.description||"No description")}</p>
+   <p>Category: ${escapeHTML(task.category)}</p>
+   <p>Listed reward: ${rupees(task.reward_paise)}</p>${link}
+  </div>`;
  }).join("");
 }
 
-function openWithdrawModal(){
- document.getElementById("withdrawModal")?.classList.remove("hidden");
- showStatus("");
-}
-
-function closeWithdrawModal(){
- document.getElementById("withdrawModal")?.classList.add("hidden");
-}
-
-function openAdminPassword(){
- document.getElementById("adminPasswordModal")?.classList.remove("hidden");
- showStatus("");
-}
-
-function closeAdminPassword(){
- document.getElementById("adminPasswordModal")?.classList.add("hidden");
-}
+function openWithdrawModal(){document.getElementById("withdrawModal")?.classList.remove("hidden");showStatus("")}
+function closeWithdrawModal(){document.getElementById("withdrawModal")?.classList.add("hidden")}
+function openAdminPassword(){document.getElementById("adminPasswordModal")?.classList.remove("hidden");showStatus("")}
+function closeAdminPassword(){document.getElementById("adminPasswordModal")?.classList.add("hidden")}
 
 async function checkAdminPermission(){
  const {data,error}=await client.rpc("is_admin");
- if(error){
-  console.error("Admin check:",error.message);
-  return false;
- }
+ if(error){console.error("Admin check:",error.message);return false}
  return data===true;
 }
 
 async function showDashboard(username,user){
- currentUser=user;
- currentUsername=username;
- adminVerified=false;
-
+ currentUser=user;currentUsername=username;adminVerified=false;
  content.innerHTML=`
-  <header class="header">
-   <div class="brand">
-    <div class="logo">✦</div>
-    <div><h2>HYY EARN</h2><p>Complete · Earn · Redeem</p></div>
-   </div>
-   <div class="header-actions">
-    <button class="icon-btn" id="notifications">♧</button>
-    <div class="profile-wrap">
-     <button class="icon-btn" id="profileBtn">👤</button>
-     <div class="profile-menu hidden" id="profileMenu">
-      <p id="menuUsername"></p>
-      <button id="adminOption" class="hidden">Admin Dashboard</button>
-      <button id="menuLogout" class="logout-btn">Logout</button>
-     </div>
+ <header class="header">
+  <div class="brand"><div class="logo">✦</div><div><h2>HYY EARN</h2><p>Complete · Earn · Redeem</p></div></div>
+  <div class="header-actions">
+   <button class="icon-btn" id="notifications">♧</button>
+   <div class="profile-wrap">
+    <button class="icon-btn" id="profileBtn">👤</button>
+    <div class="profile-menu hidden" id="profileMenu">
+     <p id="menuUsername"></p>
+     <button id="adminOption" class="hidden">Admin Dashboard</button>
+     <button id="menuLogout" class="logout-btn">Logout</button>
     </div>
-   </div>
-  </header>
-
-  <p class="greeting">Welcome back,</p>
-  <h2 id="welcome"></h2>
-
-  <section class="wallet">
-   <div class="wallet-top">
-    <span class="wallet-label">Your Wallet Balance</span>
-    <span class="wallet-icon">◈</span>
-   </div>
-   <div class="amount" id="bal">...</div>
-   <div class="wallet-bottom">
-    <small>Available balance</small>
-    <button class="primary-btn" id="goWithdraw">Withdraw</button>
-   </div>
-  </section>
-
-  <section class="card">
-   <div class="section-title"><h3>Daily Check-in</h3><span>🎁</span></div>
-   <div class="checkin">
-    <div class="check-icon">📅</div>
-    <div class="check-text"><h3>Daily reward</h3><p>Check in every day</p></div>
-    <button class="check-btn" id="checkin">Check in</button>
-   </div>
-  </section>
-
-  <section class="card">
-   <div class="section-title"><h3>Earn More</h3></div>
-   <div class="grid">
-    <div class="tile"><div class="tile-icon">📋</div><h4>Surveys</h4><p>Coming soon</p></div>
-    <div class="tile"><div class="tile-icon">🎯</div><h4>Tasks</h4><p>See Available Tasks below</p></div>
-    <div class="tile"><div class="tile-icon">🎮</div><h4>Games</h4><p>Coming soon</p></div>
-    <div class="tile"><div class="tile-icon">🎁</div><h4>Rewards</h4><p>Coming soon</p></div>
-   </div>
-  </section>
-
-  <section class="card">
-   <h3>Available Tasks</h3>
-   <div id="availableTasks" class="muted">
-    Loading available tasks...
-   </div>
-  </section>
-
-  <section class="card">
-   <div class="referral">
-    <h3>Refer & Earn 🎉</h3>
-    <p class="muted">Referral rewards are coming soon.</p>
-   </div>
-  </section>
-
-  <section class="card">
-   <h3>Recent Activity</h3>
-   <div class="activity">No activity yet</div>
-  </section>
-
-  <div class="modal-overlay hidden" id="withdrawModal">
-   <div class="modal">
-    <div class="modal-header">
-     <h3>Withdraw Request</h3>
-     <button class="close-btn" id="closeWithdraw">×</button>
-    </div>
-    <p class="muted">Enter your withdrawal amount and UPI ID.</p>
-    <div class="modal-note">Minimum withdrawal ₹100. This sends a request only; it does not transfer money automatically.</div>
-    <input id="wamount" type="number" min="100" placeholder="Amount (₹)">
-    <input id="wupi" placeholder="UPI ID (name@bank)">
-    <button class="action" id="withdrawSubmit">Send Request</button>
    </div>
   </div>
-
-  <div class="modal-overlay hidden" id="adminPasswordModal">
-   <div class="modal">
-    <div class="modal-header">
-     <h3>Admin Verification</h3>
-     <button class="close-btn" id="closeAdmin">×</button>
-    </div>
-    <p class="muted">Enter your admin password to continue.</p>
-    <input id="adminPassword" type="password" placeholder="Admin password" autocomplete="current-password">
-    <button class="action" id="adminLoginSubmit">Verify & Continue</button>
-    <p id="adminError" class="muted"></p>
-   </div>
+ </header>
+ <p class="greeting">Welcome back,</p><h2 id="welcome"></h2>
+ <section class="wallet">
+  <div class="wallet-top"><span class="wallet-label">Your Wallet Balance</span><span class="wallet-icon">◈</span></div>
+  <div class="amount" id="bal">...</div>
+  <div class="wallet-bottom"><small>Available balance</small><button class="primary-btn" id="goWithdraw">Withdraw</button></div>
+ </section>
+ <section class="card">
+  <div class="section-title"><h3>Daily Check-in</h3><span>🎁</span></div>
+  <div class="checkin"><div class="check-icon">📅</div><div class="check-text"><h3>Daily reward</h3><p>Check in every day</p></div><button class="check-btn" id="checkin">Check in</button></div>
+ </section>
+ <section class="card"><div class="section-title"><h3>Earn More</h3></div>
+  <div class="grid">
+   <div class="tile"><div class="tile-icon">📋</div><h4>Surveys</h4><p>Coming soon</p></div>
+   <div class="tile"><div class="tile-icon">🎯</div><h4>Tasks</h4><p>See Available Tasks below</p></div>
+   <div class="tile"><div class="tile-icon">🎮</div><h4>Games</h4><p>Coming soon</p></div>
+   <div class="tile"><div class="tile-icon">🎁</div><h4>Rewards</h4><p>Coming soon</p></div>
   </div>
-
-  <nav class="bottom-nav">
-   <div class="nav-inner">
-    <button class="nav-item active" data-tab="home"><span>⌂</span>Home</button>
-    <button class="nav-item" data-tab="offers"><span>▣</span>Offers</button>
-    <button class="nav-item" data-tab="refer"><span>♧</span>Refer</button>
-    <button class="nav-item" data-tab="profile"><span>◉</span>Profile</button>
-   </div>
-  </nav>
- `;
+ </section>
+ <section class="card"><h3>Available Tasks</h3><div id="availableTasks" class="muted">Loading available tasks...</div></section>
+ <section class="card"><div class="referral"><h3>Refer & Earn 🎉</h3><p class="muted">Referral rewards are coming soon.</p></div></section>
+ <section class="card"><h3>Recent Activity</h3><div class="activity">No activity yet</div></section>
+ <div class="modal-overlay hidden" id="withdrawModal"><div class="modal">
+  <div class="modal-header"><h3>Withdraw Request</h3><button class="close-btn" id="closeWithdraw">×</button></div>
+  <p class="muted">Enter your withdrawal amount and UPI ID.</p>
+  <div class="modal-note">Minimum withdrawal ₹100. This sends a request only; it does not transfer money automatically.</div>
+  <input id="wamount" type="number" min="100" placeholder="Amount (₹)">
+  <input id="wupi" placeholder="UPI ID (name@bank)">
+  <button class="action" id="withdrawSubmit">Send Request</button>
+ </div></div>
+ <div class="modal-overlay hidden" id="adminPasswordModal"><div class="modal">
+  <div class="modal-header"><h3>Admin Verification</h3><button class="close-btn" id="closeAdmin">×</button></div>
+  <p class="muted">Enter your admin password to continue.</p>
+  <input id="adminPassword" type="password" placeholder="Admin password" autocomplete="current-password">
+  <button class="action" id="adminLoginSubmit">Verify & Continue</button><p id="adminError" class="muted"></p>
+ </div></div>
+ <nav class="bottom-nav"><div class="nav-inner">
+  <button class="nav-item active" data-tab="home"><span>⌂</span>Home</button>
+  <button class="nav-item" data-tab="offers"><span>▣</span>Offers</button>
+  <button class="nav-item" data-tab="refer"><span>♧</span>Refer</button>
+  <button class="nav-item" data-tab="profile"><span>◉</span>Profile</button>
+ </div></nav>`;
 
  document.getElementById("welcome").textContent=username+"!";
  document.getElementById("menuUsername").textContent="Username: "+username;
+ document.getElementById("bal").textContent=rupees(await getBalance(user));
+ loadPublishedTasks();
 
- const bal=document.getElementById("bal");
- bal.textContent=rupees(await getBalance(user));
+ if(await checkAdminPermission())document.getElementById("adminOption").classList.remove("hidden");
 
- /* Fetch tasks visible to signed-in users */
- loadPublishedTasks(user);
-
- const isAdmin=await checkAdminPermission();
- if(isAdmin)document.getElementById("adminOption").classList.remove("hidden");
-
- document.getElementById("profileBtn").onclick=()=>{
-  document.getElementById("profileMenu").classList.toggle("hidden");
- };
-
+ document.getElementById("profileBtn").onclick=()=>document.getElementById("profileMenu").classList.toggle("hidden");
  document.getElementById("adminOption").onclick=()=>{
-  document.getElementById("profileMenu").classList.add("hidden");
-  openAdminPassword();
+  document.getElementById("profileMenu").classList.add("hidden");openAdminPassword();
  };
-
  document.getElementById("closeAdmin").onclick=closeAdminPassword;
-
- document.getElementById("adminPasswordModal").onclick=e=>{
-  if(e.target.id==="adminPasswordModal")closeAdminPassword();
- };
+ document.getElementById("adminPasswordModal").onclick=e=>{if(e.target.id==="adminPasswordModal")closeAdminPassword()};
 
  document.getElementById("adminLoginSubmit").onclick=async()=>{
   const password=document.getElementById("adminPassword").value;
   const btn=document.getElementById("adminLoginSubmit");
   const errorBox=document.getElementById("adminError");
-
-  if(!password){
-   errorBox.textContent="Enter your password.";
-   return;
-  }
-
-  btn.disabled=true;
-  btn.textContent="Verifying...";
-  errorBox.textContent="";
-
+  if(!password){errorBox.textContent="Enter your password.";return}
+  btn.disabled=true;btn.textContent="Verifying...";errorBox.textContent="";
   try{
    const {data,error}=await client.functions.invoke("smart-function",{body:{password}});
-
-   if(error||!data?.success){
-    errorBox.textContent=data?.error||error?.message||"Admin verification failed.";
-    return;
-   }
-
-   adminVerified=true;
-   closeAdminPassword();
+   if(error||!data?.success){errorBox.textContent=data?.error||error?.message||"Admin verification failed.";return}
+   adminVerified=true;closeAdminPassword();
    document.getElementById("adminPassword").value="";
    showAdminDashboard();
-  }catch(err){
-   errorBox.textContent="Unable to verify. Please try again.";
-  }finally{
-   btn.disabled=false;
-   btn.textContent="Verify & Continue";
-  }
+  }catch(err){errorBox.textContent="Unable to verify. Please try again."}
+  finally{btn.disabled=false;btn.textContent="Verify & Continue"}
  };
 
  document.getElementById("menuLogout").onclick=async()=>{
-  showStatus("Logging out...");
-  adminVerified=false;
+  showStatus("Logging out...");adminVerified=false;
   const {error}=await client.auth.signOut();
-  if(error){showStatus(error.message);return;}
-  showLogin();
-  showStatus("");
+  if(error){showStatus(error.message);return}
+  showLogin();showStatus("");
  };
-
- document.getElementById("notifications").onclick=()=>{
-  showStatus("No notifications yet.");
- };
-
+ document.getElementById("notifications").onclick=()=>showStatus("No notifications yet.");
  document.getElementById("goWithdraw").onclick=openWithdrawModal;
  document.getElementById("closeWithdraw").onclick=closeWithdrawModal;
-
- document.getElementById("withdrawModal").onclick=e=>{
-  if(e.target.id==="withdrawModal")closeWithdrawModal();
- };
+ document.getElementById("withdrawModal").onclick=e=>{if(e.target.id==="withdrawModal")closeWithdrawModal()};
 
  document.getElementById("checkin").onclick=async()=>{
-  const btn=document.getElementById("checkin");
-  btn.disabled=true;
-  showStatus("Checking in...");
-
-  const {data,error}=await client.rpc("daily_checkin");
-  btn.disabled=false;
-
-  if(error){
-   showStatus(error.message.includes("Already")?"Ee roju check-in ayyindi. Repu malli randi!":error.message);
-   return;
-  }
-
-  bal.textContent=rupees(data);
-  showStatus("Check-in successful!",true);
+  const btn=document.getElementById("checkin");btn.disabled=true;showStatus("Checking in...");
+  const {data,error}=await client.rpc("daily_checkin");btn.disabled=false;
+  if(error){showStatus(error.message.includes("Already")?"Ee roju check-in ayyindi. Repu malli randi!":error.message);return}
+  document.getElementById("bal").textContent=rupees(data);showStatus("Check-in successful!",true);
  };
 
  document.getElementById("withdrawSubmit").onclick=async()=>{
   const amount=Math.round(Number(document.getElementById("wamount").value)*100);
   const upi=document.getElementById("wupi").value.trim();
-
-  if(!amount||amount<10000){showStatus("Minimum withdrawal ₹100");return;}
-  if(!/^[\w.\-]{2,}@[\w]{2,}$/.test(upi)){showStatus("Sariyaina UPI ID ivvandi (name@bank)");return;}
-
-  const btn=document.getElementById("withdrawSubmit");
-  btn.disabled=true;
-  showStatus("Sending...");
-
-  const {error}=await client.rpc("request_withdrawal",{p_amount:amount,p_upi:upi});
-  btn.disabled=false;
-
-  if(error){showStatus(error.message);return;}
-
-  bal.textContent=rupees(await getBalance(user));
-  closeWithdrawModal();
-  document.getElementById("wamount").value="";
-  document.getElementById("wupi").value="";
+  if(!amount||amount<10000){showStatus("Minimum withdrawal ₹100");return}
+  if(!/^[\w.\-]{2,}@[\w]{2,}$/.test(upi)){showStatus("Sariyaina UPI ID ivvandi (name@bank)");return}
+  const btn=document.getElementById("withdrawSubmit");btn.disabled=true;showStatus("Sending...");
+  const {error}=await client.rpc("request_withdrawal",{p_amount:amount,p_upi:upi});btn.disabled=false;
+  if(error){showStatus(error.message);return}
+  document.getElementById("bal").textContent=rupees(await getBalance(user));
+  closeWithdrawModal();document.getElementById("wamount").value="";document.getElementById("wupi").value="";
   showStatus("Request sent!",true);
  };
 
@@ -544,194 +342,167 @@ async function showDashboard(username,user){
   btn.onclick=()=>{
    document.querySelectorAll(".nav-item").forEach(item=>item.classList.remove("active"));
    btn.classList.add("active");
-
    const tab=btn.dataset.tab;
    if(tab==="home")window.scrollTo({top:0,behavior:"smooth"});
-   else if(tab==="offers"){
-    document.querySelector(".card").scrollIntoView({behavior:"smooth"});
-    showStatus("Offers are coming soon.");
-   }else if(tab==="refer"){
-    document.querySelector(".referral").scrollIntoView({behavior:"smooth"});
-    showStatus("Referral feature is coming soon.");
-   }else if(tab==="profile"){
-    document.getElementById("profileBtn").click();
-    window.scrollTo({top:0,behavior:"smooth"});
-   }
+   else if(tab==="offers"){document.querySelector(".card").scrollIntoView({behavior:"smooth"});showStatus("Offers are coming soon.")}
+   else if(tab==="refer"){document.querySelector(".referral").scrollIntoView({behavior:"smooth"});showStatus("Referral feature is coming soon.")}
+   else if(tab==="profile"){document.getElementById("profileBtn").click();window.scrollTo({top:0,behavior:"smooth"})}
   };
  });
 }
 
 function showAdminDashboard(){
- if(!adminVerified||!currentUser){
-  showDashboard(currentUsername,currentUser);
-  return;
- }
-
+ if(!adminVerified||!currentUser){showDashboard(currentUsername,currentUser);return}
  content.innerHTML=`
-  <header class="header">
-   <div class="brand">
-    <div class="logo">✦</div>
-    <div><h2>HYY EARN</h2><p>Administration</p></div>
-   </div>
-   <button class="icon-btn" id="adminProfile">👤</button>
-  </header>
+ <header class="header"><div class="brand"><div class="logo">✦</div><div><h2>HYY EARN</h2><p>Administration</p></div></div><button class="icon-btn" id="adminProfile">👤</button></header>
+ <button class="back-btn" id="backUser">← User Dashboard</button>
+ <section class="admin-head"><h2>Admin Dashboard</h2><p style="margin:0;opacity:.85;font-size:13px">Welcome, ${escapeHTML(currentUsername)}</p></section>
+ <section class="admin-item" id="createTasksCard" style="cursor:pointer"><h3>➕ Create Tasks</h3><p class="muted">Create and publish tasks for users.</p><button class="action">Open Create Tasks →</button></section>
+ <section class="admin-item"><h3>📋 Your Tasks</h3><div id="adminTaskList" class="muted">Loading tasks...</div></section>
+ <section class="admin-item"><h3>📋 Task Approvals</h3><p class="muted">Submission review will be activated next.</p><span class="admin-tag">Coming next</span></section>
+ <section class="admin-item"><h3>👥 Manage Users</h3><p class="muted">User management will be activated next.</p><span class="admin-tag">Coming next</span></section>
+ <section class="admin-item"><h3>💸 Withdrawals</h3><p class="muted">Withdrawal review will be activated next.</p><span class="admin-tag">Coming next</span></section>
+ <section class="admin-item"><h3>🔔 Notifications</h3><p class="muted">Notifications will be activated next.</p><span class="admin-tag">Coming next</span></section>`;
 
-  <button class="back-btn" id="backUser">← User Dashboard</button>
-
-  <section class="admin-head">
-   <h2>Admin Dashboard</h2>
-   <p style="margin:0;opacity:.85;font-size:13px">Welcome, ${escapeHTML(currentUsername)}</p>
-  </section>
-
-  <section class="admin-item" id="createTasksCard" style="cursor:pointer">
-   <h3>➕ Create Tasks</h3>
-   <p class="muted">Create and publish tasks for users.</p>
-   <button class="action">Open Create Tasks →</button>
-  </section>
-
-  <section class="admin-item">
-   <h3>📋 Your Tasks</h3>
-   <div id="adminTaskList" class="muted">Loading tasks...</div>
-  </section>
-
-  <section class="admin-item">
-   <h3>📋 Task Approvals</h3>
-   <p class="muted">Submission review will be activated next.</p>
-   <span class="admin-tag">Coming next</span>
-  </section>
-
-  <section class="admin-item">
-   <h3>👥 Manage Users</h3>
-   <p class="muted">User management will be activated next.</p>
-   <span class="admin-tag">Coming next</span>
-  </section>
-
-  <section class="admin-item">
-   <h3>💸 Withdrawals</h3>
-   <p class="muted">Withdrawal review will be activated next.</p>
-   <span class="admin-tag">Coming next</span>
-  </section>
-
-  <section class="admin-item">
-   <h3>🔔 Notifications</h3>
-   <p class="muted">Notifications will be activated next.</p>
-   <span class="admin-tag">Coming next</span>
-  </section>
- `;
-
- document.getElementById("backUser").onclick=()=>{
-  adminVerified=false;
-  showDashboard(currentUsername,currentUser);
- };
-
- document.getElementById("adminProfile").onclick=()=>{
-  adminVerified=false;
-  showDashboard(currentUsername,currentUser);
- };
-
+ document.getElementById("backUser").onclick=()=>{adminVerified=false;showDashboard(currentUsername,currentUser)};
+ document.getElementById("adminProfile").onclick=()=>{adminVerified=false;showDashboard(currentUsername,currentUser)};
  document.getElementById("createTasksCard").onclick=renderCreateTaskPage;
 
  async function loadAdminTasks(){
   const list=document.getElementById("adminTaskList");
   if(!list)return;
-
   const {data,error}=await client.from("tasks")
    .select("id,title,description,category,reward_paise,task_url,status,created_at")
    .order("created_at",{ascending:false});
-
-  if(error){list.textContent="Unable to load tasks: "+error.message;return;}
-  if(!data||data.length===0){list.textContent="No tasks created yet.";return;}
-
-  list.innerHTML=data.map(task=>`
-   <div class="task-row">
+  if(error){list.textContent="Unable to load tasks: "+error.message;return}
+  if(!data||!data.length){list.textContent="No tasks created yet.";return}
+  list.innerHTML=data.map(task=>{
+   const paused=task.status==="paused";
+   return `<div class="task-row">
     <h4>${escapeHTML(task.title)}</h4>
     <p>${escapeHTML(task.description||"No description")}</p>
     <p>Category: ${escapeHTML(task.category)}</p>
     <p>Reward: ${rupees(task.reward_paise)}</p>
     ${task.task_url?`<p><a href="${escapeHTML(task.task_url)}" target="_blank" rel="noopener noreferrer">Open task link</a></p>`:""}
     <span class="task-status">${escapeHTML(task.status)}</span>
-   </div>
-  `).join("");
+    <div class="task-actions">
+     <button class="small-btn" data-edit="${escapeHTML(task.id)}">✏️ Edit</button>
+     <button class="small-btn pause" data-toggle="${escapeHTML(task.id)}" data-status="${paused?"paused":"published"}">${paused?"▶ Resume":"Ⅱ Pause"}</button>
+     <button class="small-btn delete" data-delete="${escapeHTML(task.id)}">🗑 Delete</button>
+    </div>
+   </div>`;
+  }).join("");
+
+  list.querySelectorAll("[data-edit]").forEach(btn=>{
+   btn.onclick=()=>editTask(btn.dataset.edit,data.find(t=>String(t.id)===btn.dataset.edit));
+  });
+  list.querySelectorAll("[data-toggle]").forEach(btn=>{
+   btn.onclick=()=>toggleTask(btn.dataset.toggle,btn.dataset.status);
+  });
+  list.querySelectorAll("[data-delete]").forEach(btn=>{
+   btn.onclick=()=>deleteTask(btn.dataset.delete);
+  });
+ }
+
+ async function toggleTask(id,currentStatus){
+  if(!adminVerified)return;
+  const newStatus=currentStatus==="paused"?"published":"paused";
+  const label=newStatus==="paused"?"pause":"resume";
+  if(!confirm("Are you sure you want to "+label+" this task?"))return;
+  const {error}=await client.from("tasks").update({status:newStatus}).eq("id",id);
+  if(error){showStatus("Update failed: "+error.message);return}
+  showStatus(newStatus==="paused"?"Task paused.":"Task resumed.",true);
+  loadAdminTasks();
+ }
+
+ async function deleteTask(id){
+  if(!adminVerified)return;
+  if(!confirm("Permanently delete this task? This cannot be undone."))return;
+  const {error}=await client.from("tasks").delete().eq("id",id);
+  if(error){showStatus("Delete failed: "+error.message);return}
+  showStatus("Task deleted successfully.",true);
+  loadAdminTasks();
+ }
+
+ function editTask(id,task){
+  if(!adminVerified||!task)return;
+  content.innerHTML=`
+   <header class="header"><div class="brand"><div class="logo">✦</div><div><h2>HYY EARN</h2><p>Edit Task</p></div></div></header>
+   <button class="back-btn" id="backAdmin">← Admin Dashboard</button>
+   <section class="admin-head"><h2>✏️ Edit Task</h2><p style="margin:0;opacity:.85;font-size:13px">Update task details.</p></section>
+   <section class="admin-item">
+    <input id="editTitle" maxlength="100" placeholder="Task title" value="${escapeHTML(task.title)}">
+    <textarea id="editDescription" maxlength="1000" placeholder="Task description">${escapeHTML(task.description||"")}</textarea>
+    <input id="editCategory" maxlength="40" placeholder="Category" value="${escapeHTML(task.category||"General")}">
+    <input id="editReward" type="number" min="0" max="100000" step="0.01" placeholder="Reward amount (₹)" value="${(task.reward_paise||0)/100}">
+    <input id="editUrl" type="url" placeholder="Task link (optional)" value="${escapeHTML(task.task_url||"")}">
+    <button class="action" id="saveEdit">Save Changes</button>
+   </section>`;
+
+  document.getElementById("backAdmin").onclick=showAdminDashboard;
+  document.getElementById("saveEdit").onclick=async()=>{
+   const title=document.getElementById("editTitle").value.trim();
+   const description=document.getElementById("editDescription").value.trim();
+   const category=document.getElementById("editCategory").value.trim()||"General";
+   const reward=Number(document.getElementById("editReward").value);
+   const taskUrl=document.getElementById("editUrl").value.trim();
+   if(!title){showStatus("Task title enter cheyyi.");return}
+   if(!Number.isFinite(reward)||reward<0||reward>100000){showStatus("Valid reward amount enter cheyyi.");return}
+   if(taskUrl){
+    try{const u=new URL(taskUrl);if(!["https:","http:"].includes(u.protocol))throw new Error()}
+    catch{showStatus("Valid task link enter cheyyi.");return}
+   }
+   const btn=document.getElementById("saveEdit");btn.disabled=true;showStatus("Updating...");
+   const {error}=await client.from("tasks").update({
+    title,description,category,reward_paise:Math.round(reward*100),task_url:taskUrl||null
+   }).eq("id",id);
+   btn.disabled=false;
+   if(error){showStatus("Edit failed: "+error.message);return}
+   showStatus("Task updated successfully!",true);
+   showAdminDashboard();
+  };
  }
 
  function renderCreateTaskPage(){
   if(!adminVerified||!currentUser)return;
-
   content.innerHTML=`
-   <header class="header">
-    <div class="brand">
-     <div class="logo">✦</div>
-     <div><h2>HYY EARN</h2><p>Create New Task</p></div>
-    </div>
-   </header>
-
+   <header class="header"><div class="brand"><div class="logo">✦</div><div><h2>HYY EARN</h2><p>Create New Task</p></div></div></header>
    <button class="back-btn" id="backAdmin">← Admin Dashboard</button>
-
-   <section class="admin-head">
-    <h2>➕ Create Tasks</h2>
-    <p style="margin:0;opacity:.85;font-size:13px">Add a new task for users.</p>
-   </section>
-
-   <section class="admin-item">
-    <h3>Task Details</h3>
-
+   <section class="admin-head"><h2>➕ Create Tasks</h2><p style="margin:0;opacity:.85;font-size:13px">Add a new task for users.</p></section>
+   <section class="admin-item"><h3>Task Details</h3>
     <input id="taskTitle" maxlength="100" placeholder="Task title">
     <textarea id="taskDescription" maxlength="1000" placeholder="Task description"></textarea>
     <input id="taskCategory" maxlength="40" placeholder="Category (e.g. Survey)">
     <input id="taskReward" type="number" min="0" max="100000" step="0.01" placeholder="Reward amount (₹)">
     <input id="taskUrl" type="url" placeholder="Task link (optional)">
-
     <button class="action" id="publishTask">Publish Task</button>
     <button class="action" id="saveDraft" style="background:#eee3f8;color:#7138c8">Save as Draft</button>
-   </section>
-  `;
+   </section>`;
 
   document.getElementById("backAdmin").onclick=showAdminDashboard;
-
   async function createTask(taskStatus){
    const title=document.getElementById("taskTitle").value.trim();
    const description=document.getElementById("taskDescription").value.trim();
    const category=document.getElementById("taskCategory").value.trim()||"General";
    const reward=Number(document.getElementById("taskReward").value);
    const taskUrl=document.getElementById("taskUrl").value.trim();
-
-   if(!title){showStatus("Task title enter cheyyi.");return;}
-   if(!Number.isFinite(reward)||reward<0||reward>100000){
-    showStatus("Valid reward amount enter cheyyi.");
-    return;
-   }
-
+   if(!title){showStatus("Task title enter cheyyi.");return}
+   if(!Number.isFinite(reward)||reward<0||reward>100000){showStatus("Valid reward amount enter cheyyi.");return}
    if(taskUrl){
-    try{
-     const parsed=new URL(taskUrl);
-     if(!["http:","https:"].includes(parsed.protocol))throw new Error("Invalid URL");
-    }catch{
-     showStatus("Valid task link enter cheyyi.");
-     return;
-    }
+    try{const u=new URL(taskUrl);if(!["https:","http:"].includes(u.protocol))throw new Error()}
+    catch{showStatus("Valid task link enter cheyyi.");return}
    }
-
    const btn=document.getElementById(taskStatus==="published"?"publishTask":"saveDraft");
-   btn.disabled=true;
-   showStatus("Saving task...");
-
+   btn.disabled=true;showStatus("Saving task...");
    const {error}=await client.from("tasks").insert({
-    title:title,
-    description:description,
-    category:category,
-    reward_paise:Math.round(reward*100),
-    task_url:taskUrl||null,
-    status:taskStatus
+    title,description,category,reward_paise:Math.round(reward*100),
+    task_url:taskUrl||null,status:taskStatus
    });
-
    btn.disabled=false;
-
-   if(error){showStatus("Task save failed: "+error.message);return;}
-
+   if(error){showStatus("Task save failed: "+error.message);return}
    showStatus(taskStatus==="published"?"Task published successfully!":"Task saved as draft!",true);
    renderCreateTaskPage();
   }
-
   document.getElementById("publishTask").onclick=()=>createTask("published");
   document.getElementById("saveDraft").onclick=()=>createTask("draft");
  }
@@ -740,57 +511,38 @@ function showAdminDashboard(){
 }
 
 async function loadUser(user){
- currentUser=user;
- showStatus("Loading profile...");
-
- const {data:profile,error}=await client.from("profilea")
-  .select("username")
-  .eq("id",user.id)
-  .maybeSingle();
-
- if(error){showStatus(error.message);return;}
-
+ currentUser=user;showStatus("Loading profile...");
+ const {data:profile,error}=await client.from("profilea").select("username").eq("id",user.id).maybeSingle();
+ if(error){showStatus(error.message);return}
  showStatus("");
-
  if(profile)await showDashboard(profile.username,user);
  else showUsername(user);
 }
 
 async function checkLogin(){
  const {data,error}=await client.auth.getSession();
-
- if(error){showStatus(error.message);showLogin();return;}
-
+ if(error){showStatus(error.message);showLogin();return}
  const user=data.session?.user;
- if(!user){showLogin();return;}
-
+ if(!user){showLogin();return}
  await loadUser(user);
 }
 
 client.auth.onAuthStateChange((event,session)=>{
  if(event==="INITIAL_SESSION")return;
-
- if(session?.user&&event==="SIGNED_IN"){
-  setTimeout(()=>loadUser(session.user),0);
- }else if(event==="SIGNED_OUT"){
-  adminVerified=false;
-  showLogin();
- }
+ if(session?.user&&event==="SIGNED_IN")setTimeout(()=>loadUser(session.user),0);
+ else if(event==="SIGNED_OUT"){adminVerified=false;showLogin()}
 });
 
 async function start(){
  const code=new URLSearchParams(location.search).get("code");
-
  if(code){
   showStatus("Finishing login...");
   const {error}=await client.auth.exchangeCodeForSession(code);
   history.replaceState({},"",location.pathname);
   if(error)showStatus("Exchange error: "+error.message);
  }
-
  await checkLogin();
 }
-
 start();
 </script>
 </body>
