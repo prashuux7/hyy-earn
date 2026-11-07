@@ -72,7 +72,7 @@ textarea{min-height:90px;resize:vertical}
 button{cursor:pointer}
 button:disabled{opacity:.5;cursor:not-allowed}
 .modal-overlay{position:fixed;inset:0;background:rgba(30,12,50,.55);display:flex;align-items:center;justify-content:center;padding:18px;z-index:20}
-.modal{width:100%;max-width:400px;background:white;border-radius:22px;padding:23px;box-shadow:0 10px 35px #0003}
+.modal{width:100%;max-width:400px;max-height:90vh;overflow-y:auto;background:white;border-radius:22px;padding:23px;box-shadow:0 10px 35px #0003}
 .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
 .modal-header h3{font-size:20px;margin:0}
 .close-btn{border:0;background:#f3eafa;color:#7138c8;width:36px;height:36px;border-radius:10px;font-size:20px}
@@ -92,6 +92,7 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .small-btn{border:0;border-radius:9px;padding:10px 6px;font-weight:bold;background:#eee3f8;color:#7138c8;font-size:12px}
 .small-btn.delete{background:#ffe9e9;color:#bd3434}
 .small-btn.pause{background:#fff2d9;color:#9b6810}
+.file-label{display:block;text-align:left;font-size:13px;font-weight:bold;margin:12px 0 2px}
 </style>
 </head>
 <body>
@@ -176,6 +177,8 @@ async function getBalance(user){
  return data?data.balance_paise:0;
 }
 
+const IMAGE_TYPES={"image/jpeg":"jpg","image/png":"png","image/webp":"webp"};
+
 function openSubmitModal(task){
  const old=document.getElementById("submitModal");
  if(old)old.remove();
@@ -186,8 +189,11 @@ function openSubmitModal(task){
   <div class="modal">
    <div class="modal-header"><h3>Submit Proof</h3><button class="close-btn" id="closeSubmit">×</button></div>
    <p class="muted" id="submitTitle"></p>
-   <textarea id="proofText" maxlength="1000" placeholder="Em chesaru? (details rayandi)"></textarea>
-   <input id="proofUrl" type="url" maxlength="500" placeholder="Proof link (screenshot / profile link)">
+   <label class="file-label" for="proofFile">📸 Screenshot upload</label>
+   <input id="proofFile" type="file" accept="image/jpeg,image/png,image/webp">
+   <p class="muted" id="fileInfo">JPG, PNG leda WebP. Max 5 MB.</p>
+   <textarea id="proofText" maxlength="1000" placeholder="Em chesaru? (optional details)"></textarea>
+   <input id="proofUrl" type="url" maxlength="500" placeholder="Proof link (optional)">
    <div class="modal-note">Admin check chesi approve chestaru. Okka task ki okasari matrame submit cheyagalaru.</div>
    <button class="action" id="sendProof">Submit</button>
   </div>`;
@@ -195,20 +201,54 @@ function openSubmitModal(task){
  document.getElementById("submitTitle").textContent=task.title;
  document.getElementById("closeSubmit").onclick=()=>box.remove();
  box.onclick=e=>{if(e.target===box)box.remove()};
+
+ document.getElementById("proofFile").onchange=e=>{
+  const f=e.target.files[0];
+  const info=document.getElementById("fileInfo");
+  if(!f){info.textContent="JPG, PNG leda WebP. Max 5 MB.";return}
+  info.textContent="Selected: "+f.name+" ("+(f.size/1024/1024).toFixed(2)+" MB)";
+ };
+
  document.getElementById("sendProof").onclick=async()=>{
   const proofText=document.getElementById("proofText").value.trim();
   const proofUrl=document.getElementById("proofUrl").value.trim();
-  if(proofText.length<3&&proofUrl.length<5){showStatus("Proof text leda link ivvandi.");return}
+  const file=document.getElementById("proofFile").files[0];
+
+  if(file){
+   if(!IMAGE_TYPES[file.type]){showStatus("JPG, PNG leda WebP image matrame.");return}
+   if(file.size>5*1024*1024){showStatus("Image 5 MB kante takkuva undali.");return}
+  }
+  if(!file&&proofText.length<3&&proofUrl.length<5){
+   showStatus("Screenshot, text leda link ivvandi.");return;
+  }
   if(proofUrl){
    try{const u=new URL(proofUrl);if(!["https:","http:"].includes(u.protocol))throw new Error()}
    catch{showStatus("Sariyaina link ivvandi.");return}
   }
+
   const btn=document.getElementById("sendProof");
-  btn.disabled=true;showStatus("Submitting...");
+  btn.disabled=true;
+
+  let path=null;
+  if(file){
+   showStatus("Uploading screenshot...");
+   path=currentUser.id+"/"+crypto.randomUUID()+"."+IMAGE_TYPES[file.type];
+   const {error:upErr}=await client.storage.from("proofs").upload(path,file,{
+    contentType:file.type,upsert:false
+   });
+   if(upErr){
+    btn.disabled=false;
+    showStatus("Upload failed: "+upErr.message);
+    return;
+   }
+  }
+
+  showStatus("Submitting...");
   const {error}=await client.rpc("submit_task",{
    p_task_id:String(task.id),
    p_proof_text:proofText||null,
-   p_proof_url:proofUrl||null
+   p_proof_url:proofUrl||null,
+   p_proof_path:path
   });
   btn.disabled=false;
   if(error){
