@@ -128,10 +128,12 @@ h3{font-size:17px;margin-bottom:8px}
  background:#7138c8;color:white;font-size:15px;font-weight:bold;
  margin-top:8px;
 }
-input{
+input,textarea,select{
  width:100%;padding:14px;border:1px solid #e6d9f2;
  border-radius:11px;margin:8px 0;font-size:15px;
+ font-family:Arial,sans-serif;
 }
+textarea{min-height:90px;resize:vertical}
 #status{
  text-align:center;color:#c0392b;font-size:13px;
  overflow-wrap:anywhere;margin:12px 0;
@@ -188,6 +190,17 @@ button:disabled{opacity:.5;cursor:not-allowed}
  border:0;background:#7138c8;color:white;padding:12px 17px;
  border-radius:11px;font-weight:bold;margin-bottom:16px;
 }
+.task-row{
+ border:1px solid #eee3f8;
+ padding:13px;border-radius:12px;margin:10px 0;
+ overflow-wrap:anywhere;
+}
+.task-row h4{margin:0 0 6px}
+.task-row p{font-size:12px;color:#947eac;margin:5px 0}
+.task-status{
+ display:inline-block;font-size:11px;color:#7138c8;
+ background:#f1e8fc;padding:5px 9px;border-radius:15px;
+}
 </style>
 </head>
 
@@ -200,8 +213,7 @@ button:disabled{opacity:.5;cursor:not-allowed}
 <script>
 const SUPABASE_URL = "https://hofrfwjldbrfveufuvxu.supabase.co";
 
-// IMPORTANT: Keep your existing actual publishable key here.
-// Do not put your admin password or service-role key here.
+// Replace this placeholder with your existing Supabase publishable key.
 const SUPABASE_ANON_KEY = "sb_publishable_cdAswmtul4dLtyXvfIrWgQ_i42neFMJ";
 
 const client = supabase.createClient(
@@ -231,6 +243,12 @@ function showStatus(message,ok){
 
 function rupees(paise){
  return "₹"+((paise||0)/100).toFixed(2);
+}
+
+function escapeHTML(value){
+ return String(value??"").replace(/[&<>"']/g,char=>({
+  "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+ }[char]));
 }
 
 function showLogin(){
@@ -427,7 +445,7 @@ async function showDashboard(username,user){
    <div class="coming">
     <span>Coming Soon</span>
     <h4>No active tasks yet</h4>
-    <p class="muted">New sponsored tasks will appear here after approval.</p>
+    <p class="muted">Task participation will be enabled in the next update.</p>
    </div>
   </section>
 
@@ -488,7 +506,6 @@ async function showDashboard(username,user){
  const bal=document.getElementById("bal");
  bal.textContent=rupees(await getBalance(user));
 
- // Show Admin option only if this account is in admin_users.
  const isAdmin=await checkAdminPermission();
  if(isAdmin){
   document.getElementById("adminOption").classList.remove("hidden");
@@ -672,37 +689,68 @@ function showAdminDashboard(){
 
   <section class="admin-head">
    <h2>Admin Dashboard</h2>
-   <p style="margin:0;opacity:.85;font-size:13px">Welcome, ${escapeHTML(currentUsername)}</p>
-  </section>
-
-  <section class="admin-item">
-   <h3>📋 Task Approvals</h3>
-   <p class="muted">Review user task submissions and approve or reject them.</p>
-   <span class="admin-tag">Next step · Not active</span>
+   <p style="margin:0;opacity:.85;font-size:13px">
+    Welcome, ${escapeHTML(currentUsername)}
+   </p>
   </section>
 
   <section class="admin-item">
    <h3>➕ Create Tasks</h3>
-   <p class="muted">Add sponsored campaigns and publish tasks for users.</p>
-   <span class="admin-tag">Next step · Not active</span>
+   <p class="muted">Create and publish tasks for users.</p>
+
+   <input id="taskTitle" maxlength="100"
+    placeholder="Task title">
+
+   <textarea id="taskDescription" maxlength="1000"
+    placeholder="Task description"></textarea>
+
+   <input id="taskCategory" maxlength="40"
+    placeholder="Category (e.g. Survey)">
+
+   <input id="taskReward" type="number" min="0"
+    max="100000" step="0.01"
+    placeholder="Reward amount (₹)">
+
+   <input id="taskUrl" type="url"
+    placeholder="Task link (optional)">
+
+   <button class="action" id="publishTask">
+    Publish Task
+   </button>
+
+   <button class="action" id="saveDraft"
+    style="background:#eee3f8;color:#7138c8">
+    Save as Draft
+   </button>
+  </section>
+
+  <section class="admin-item">
+   <h3>📋 Your Tasks</h3>
+   <div id="adminTaskList" class="muted">Loading tasks...</div>
+  </section>
+
+  <section class="admin-item">
+   <h3>📋 Task Approvals</h3>
+   <p class="muted">Submission review will be activated next.</p>
+   <span class="admin-tag">Coming next</span>
   </section>
 
   <section class="admin-item">
    <h3>👥 Manage Users</h3>
-   <p class="muted">View registered users and their account information.</p>
-   <span class="admin-tag">Next step · Not active</span>
+   <p class="muted">User management will be activated next.</p>
+   <span class="admin-tag">Coming next</span>
   </section>
 
   <section class="admin-item">
    <h3>💸 Withdrawals</h3>
-   <p class="muted">Review withdrawal requests and update their status.</p>
-   <span class="admin-tag">Next step · Not active</span>
+   <p class="muted">Withdrawal review will be activated next.</p>
+   <span class="admin-tag">Coming next</span>
   </section>
 
   <section class="admin-item">
    <h3>🔔 Notifications</h3>
-   <p class="muted">Manage user notifications and updates.</p>
-   <span class="admin-tag">Next step · Not active</span>
+   <p class="muted">Notifications will be activated next.</p>
+   <span class="admin-tag">Coming next</span>
   </section>
  `;
 
@@ -715,12 +763,115 @@ function showAdminDashboard(){
   adminVerified=false;
   showDashboard(currentUsername,currentUser);
  };
-}
 
-function escapeHTML(value){
- return String(value).replace(/[&<>"']/g,char=>({
-  "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
- }[char]));
+ async function loadAdminTasks(){
+  const list=document.getElementById("adminTaskList");
+
+  const {data,error}=await client
+   .from("tasks")
+   .select("id,title,description,category,reward_paise,task_url,status,created_at")
+   .order("created_at",{ascending:false});
+
+  if(error){
+   list.textContent="Unable to load tasks: "+error.message;
+   return;
+  }
+
+  if(!data||data.length===0){
+   list.textContent="No tasks created yet.";
+   return;
+  }
+
+  list.innerHTML=data.map(task=>`
+   <div class="task-row">
+    <h4>${escapeHTML(task.title)}</h4>
+    <p>${escapeHTML(task.description||"No description")}</p>
+    <p>Category: ${escapeHTML(task.category)}</p>
+    <p>Reward: ${rupees(task.reward_paise)}</p>
+    ${task.task_url?
+     `<p><a href="${escapeHTML(task.task_url)}" target="_blank" rel="noopener noreferrer">Open task link</a></p>`:""}
+    <span class="task-status">${escapeHTML(task.status)}</span>
+   </div>
+  `).join("");
+ }
+
+ async function createTask(taskStatus){
+  const title=document.getElementById("taskTitle").value.trim();
+  const description=document.getElementById("taskDescription").value.trim();
+  const category=document.getElementById("taskCategory").value.trim()||"General";
+  const reward=Number(document.getElementById("taskReward").value);
+  const taskUrl=document.getElementById("taskUrl").value.trim();
+
+  if(!title){
+   showStatus("Task title enter cheyyi.");
+   return;
+  }
+
+  if(!Number.isFinite(reward)||reward<0||reward>100000){
+   showStatus("Valid reward amount enter cheyyi.");
+   return;
+  }
+
+  if(taskUrl){
+   try{
+    const parsed=new URL(taskUrl);
+    if(!["http:","https:"].includes(parsed.protocol)){
+     throw new Error("Invalid URL");
+    }
+   }catch{
+    showStatus("Valid task link enter cheyyi.");
+    return;
+   }
+  }
+
+  const btn=document.getElementById(
+   taskStatus==="published"?"publishTask":"saveDraft"
+  );
+
+  btn.disabled=true;
+  showStatus("Saving task...");
+
+  const {error}=await client.from("tasks").insert({
+   title:title,
+   description:description,
+   category:category,
+   reward_paise:Math.round(reward*100),
+   task_url:taskUrl||null,
+   status:taskStatus
+  });
+
+  btn.disabled=false;
+
+  if(error){
+   showStatus("Task save failed: "+error.message);
+   return;
+  }
+
+  document.getElementById("taskTitle").value="";
+  document.getElementById("taskDescription").value="";
+  document.getElementById("taskCategory").value="";
+  document.getElementById("taskReward").value="";
+  document.getElementById("taskUrl").value="";
+
+  showStatus(
+   taskStatus==="published"?
+   "Task published successfully!":
+   "Task saved as draft!",
+   true
+  );
+
+  await loadAdminTasks();
+ }
+
+ document.getElementById("publishTask").onclick=()=>{
+  createTask("published");
+ };
+
+ document.getElementById("saveDraft").onclick=()=>{
+  createTask("draft");
+ };
+
+ loadAdminTasks();
 }
 
 async function loadUser(user){
