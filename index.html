@@ -461,14 +461,62 @@ function showAdminDashboard(){
  <section class="admin-item" id="createTasksCard" style="cursor:pointer"><h3>➕ Create Tasks</h3><p class="muted">Create and publish tasks for users.</p><button class="action">Open Create Tasks →</button></section>
  <section class="admin-item"><h3>📋 Your Tasks</h3><div id="adminTaskList" class="muted">Loading tasks...</div></section>
  <section class="admin-item" id="approvalsCard" style="cursor:pointer"><h3>✅ Task Approvals</h3><p class="muted">Review user proofs, approve or reject.</p><button class="action">Open Task Approvals →</button></section>
+ <section class="admin-item" id="withdrawalsCard" style="cursor:pointer"><h3>💸 Withdrawals</h3><p class="muted">Review withdrawal requests, mark paid or reject.</p><button class="action">Open Withdrawals →</button></section>
  <section class="admin-item"><h3>👥 Manage Users</h3><p class="muted">User management will be activated next.</p><span class="admin-tag">Coming next</span></section>
- <section class="admin-item"><h3>💸 Withdrawals</h3><p class="muted">Withdrawal review will be activated next.</p><span class="admin-tag">Coming next</span></section>
  <section class="admin-item"><h3>🔔 Notifications</h3><p class="muted">Notifications will be activated next.</p><span class="admin-tag">Coming next</span></section>`;
 
  document.getElementById("backUser").onclick=()=>{adminVerified=false;showDashboard(currentUsername,currentUser)};
  document.getElementById("adminProfile").onclick=()=>{adminVerified=false;showDashboard(currentUsername,currentUser)};
  document.getElementById("createTasksCard").onclick=renderCreateTaskPage;
  document.getElementById("approvalsCard").onclick=renderApprovalsPage;
+ document.getElementById("withdrawalsCard").onclick=renderWithdrawalsPage;
+
+ async function renderWithdrawalsPage(){
+  if(!adminVerified||!currentUser)return;
+  content.innerHTML=`
+   <header class="header"><div class="brand"><div class="logo">✦</div><div><h2>HYY EARN</h2><p>Withdrawals</p></div></div></header>
+   <button class="back-btn" id="backAdmin">← Admin Dashboard</button>
+   <section class="admin-head"><h2>💸 Withdrawals</h2><p style="margin:0;opacity:.85;font-size:13px">UPI ki manual ga pay chesaka matrame Paid nokkandi.</p></section>
+   <section class="admin-item"><div id="wdList" class="muted">Loading requests...</div></section>`;
+  document.getElementById("backAdmin").onclick=showAdminDashboard;
+
+  const list=document.getElementById("wdList");
+  const {data,error}=await client.rpc("admin_list_withdrawals");
+  if(error){list.textContent="Unable to load: "+error.message;return}
+  if(!data||!data.length){list.textContent="No withdrawal requests yet.";return}
+
+  const labels={pending:"⏳ Pending",paid:"✅ Paid",rejected:"❌ Rejected"};
+  list.innerHTML=data.map(w=>{
+   const buttons=w.status==="pending"
+    ?`<div class="task-actions">
+       <button class="small-btn approve" data-paid="${escapeHTML(w.id)}">✔ Mark Paid</button>
+       <button class="small-btn delete" data-rej="${escapeHTML(w.id)}">✖ Reject</button>
+      </div>`
+    :"";
+   return `<div class="task-row">
+    <h4>${rupees(w.amount_paise)}</h4>
+    <p>User: ${escapeHTML(w.username||"unknown")}</p>
+    <p>UPI: ${escapeHTML(w.upi_id)}</p>
+    <p>${escapeHTML(new Date(w.created_at).toLocaleString())}</p>
+    <div style="margin-top:10px"><span class="task-status">${labels[w.status]||escapeHTML(w.status)}</span></div>
+    ${buttons}
+   </div>`;
+  }).join("");
+
+  async function reviewWd(id,paid){
+   const msg=paid
+    ?"UPI ki pay chesaara? Paid ani mark cheyala?"
+    :"Reject cheste amount user wallet ki thirigi vastundi. Continue?";
+   if(!confirm(msg))return;
+   showStatus("Updating...");
+   const {error:rErr}=await client.rpc("review_withdrawal",{p_id:Number(id),p_paid:paid});
+   if(rErr){showStatus(rErr.message.includes("Already")?"Already reviewed.":rErr.message);return}
+   showStatus(paid?"Marked as paid.":"Rejected. Amount refunded.",true);
+   renderWithdrawalsPage();
+  }
+  list.querySelectorAll("[data-paid]").forEach(b=>{b.onclick=()=>reviewWd(b.dataset.paid,true)});
+  list.querySelectorAll("[data-rej]").forEach(b=>{b.onclick=()=>reviewWd(b.dataset.rej,false)});
+ }
 
  async function renderApprovalsPage(){
   if(!adminVerified||!currentUser)return;
