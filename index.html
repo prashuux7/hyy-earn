@@ -87,6 +87,8 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .task-row h4{margin:0 0 6px}
 .task-row p{font-size:12px;color:#947eac;margin:5px 0}
 .task-status{display:inline-block;font-size:11px;color:#7138c8;background:#f1e8fc;padding:5px 9px;border-radius:15px}
+.task-status.paid{color:#1f7a45;background:#e0f6e8}
+.task-status.rejected{color:#bd3434;background:#ffe9e9}
 .task-link{display:inline-block;margin-top:10px;color:#7138c8;font-weight:bold;font-size:13px;text-decoration:none}
 .task-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:12px}
 .small-btn{border:0;border-radius:9px;padding:10px 6px;font-weight:bold;background:#eee3f8;color:#7138c8;font-size:12px}
@@ -95,6 +97,10 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .small-btn.approve{background:#e0f6e8;color:#1f7a45}
 .file-label{display:block;text-align:left;font-size:13px;font-weight:bold;margin:12px 0 2px}
 .proof-img{width:100%;border-radius:10px;margin-top:8px;border:1px solid #eee3f8}
+.wd-row{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;border:1px solid #eee3f8;border-radius:12px;padding:13px;margin:10px 0}
+.wd-row b{font-size:17px}
+.wd-row p{margin:4px 0 0;font-size:12px;color:#947eac;overflow-wrap:anywhere}
+.wd-right{text-align:right}
 </style>
 </head>
 <body>
@@ -183,6 +189,40 @@ async function getBalance(user){
  const {data,error}=await client.from("wallet").select("balance_paise").eq("user_id",user.id).maybeSingle();
  if(error){showStatus("Wallet: "+error.message);return 0}
  return data?data.balance_paise:0;
+}
+
+async function loadWithdrawalHistory(){
+ const box=document.getElementById("wdHistory");
+ if(!box||!currentUser)return;
+ const {data,error}=await client.from("withdrawals")
+  .select("id,amount_paise,upi_id,status,created_at,reviewed_at")
+  .eq("user_id",currentUser.id)
+  .order("created_at",{ascending:false})
+  .limit(20);
+ if(error){box.textContent="Unable to load withdrawal history.";return}
+ const bal=document.getElementById("bal");
+ if(bal)bal.textContent=rupees(await getBalance(currentUser));
+ if(!data||!data.length){box.innerHTML=`<div class="activity">No withdrawals yet</div>`;return}
+ const info={
+  pending:{cls:"",label:"⏳ Pending",note:"Admin review lo undi."},
+  paid:{cls:"paid",label:"✅ Success",note:"Payment mee UPI ki pampabadindi."},
+  rejected:{cls:"rejected",label:"❌ Rejected",note:"Amount mee wallet ki thirigi add ayyindi."}
+ };
+ box.innerHTML=data.map(w=>{
+  const i=info[w.status]||{cls:"",label:escapeHTML(w.status),note:""};
+  const when=new Date(w.reviewed_at||w.created_at).toLocaleString();
+  return `<div class="wd-row">
+   <div>
+    <b>${rupees(w.amount_paise)}</b>
+    <p>UPI: ${escapeHTML(w.upi_id)}</p>
+    <p>${escapeHTML(i.note)}</p>
+   </div>
+   <div class="wd-right">
+    <span class="task-status ${i.cls}">${i.label}</span>
+    <p>${escapeHTML(when)}</p>
+   </div>
+  </div>`;
+ }).join("");
 }
 
 const IMAGE_TYPES={"image/jpeg":"jpg","image/png":"png","image/webp":"webp"};
@@ -355,6 +395,7 @@ async function showDashboard(username,user){
   </div>
  </section>
  <section class="card"><h3>Available Tasks</h3><div id="availableTasks" class="muted">Loading available tasks...</div></section>
+ <section class="card"><h3>Withdrawal History</h3><div id="wdHistory" class="muted">Loading...</div></section>
  <section class="card"><div class="referral"><h3>Refer & Earn 🎉</h3><p class="muted">Referral rewards are coming soon.</p></div></section>
  <section class="card"><h3>Recent Activity</h3><div class="activity">No activity yet</div></section>
  <div class="modal-overlay hidden" id="withdrawModal"><div class="modal">
@@ -382,6 +423,7 @@ async function showDashboard(username,user){
  document.getElementById("menuUsername").textContent="Username: "+username;
  document.getElementById("bal").textContent=rupees(await getBalance(user));
  loadPublishedTasks();
+ loadWithdrawalHistory();
 
  if(await checkAdminPermission())document.getElementById("adminOption").classList.remove("hidden");
 
@@ -414,7 +456,10 @@ async function showDashboard(username,user){
   if(error){showStatus(error.message);return}
   showLogin();showStatus("");
  };
- document.getElementById("notifications").onclick=()=>showStatus("No notifications yet.");
+ document.getElementById("notifications").onclick=()=>{
+  showStatus("Refreshing...");
+  loadWithdrawalHistory().then(()=>showStatus("Updated.",true));
+ };
  document.getElementById("goWithdraw").onclick=openWithdrawModal;
  document.getElementById("closeWithdraw").onclick=closeWithdrawModal;
  document.getElementById("withdrawModal").onclick=e=>{if(e.target.id==="withdrawModal")closeWithdrawModal()};
@@ -434,8 +479,8 @@ async function showDashboard(username,user){
   const btn=document.getElementById("withdrawSubmit");btn.disabled=true;showStatus("Sending...");
   const {error}=await client.rpc("request_withdrawal",{p_amount:amount,p_upi:upi});btn.disabled=false;
   if(error){showStatus(error.message);return}
-  document.getElementById("bal").textContent=rupees(await getBalance(user));
   closeWithdrawModal();document.getElementById("wamount").value="";document.getElementById("wupi").value="";
+  await loadWithdrawalHistory();
   showStatus("Request sent!",true);
  };
 
