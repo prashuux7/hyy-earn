@@ -89,6 +89,7 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .task-row h4{margin:0 0 6px}
 .task-row p{font-size:12px;color:#947eac;margin:5px 0}
 .task-status{display:inline-block;font-size:11px;color:#7138c8;background:#f1e8fc;padding:5px 9px;border-radius:15px}
+.task-link{display:inline-block;margin-top:10px;color:#7138c8;font-weight:bold;font-size:13px;text-decoration:none}
 </style>
 </head>
 
@@ -100,6 +101,11 @@ button:disabled{opacity:.5;cursor:not-allowed}
 
 <script>
 const SUPABASE_URL="https://hofrfwjldbrfveufuvxu.supabase.co";
+
+/* IMPORTANT:
+   Paste your existing Supabase publishable key below.
+   Do not use a service_role key here.
+*/
 const SUPABASE_ANON_KEY="sb_publishable_cdAswmtul4dLtyXvfIrWgQ_i42neFMJ";
 
 const client=supabase.createClient(
@@ -214,6 +220,64 @@ async function getBalance(user){
  return data?data.balance_paise:0;
 }
 
+/* USER DASHBOARD: LOAD PUBLISHED TASKS */
+async function loadPublishedTasks(user){
+ const list=document.getElementById("availableTasks");
+ if(!list)return;
+
+ list.textContent="Loading available tasks...";
+
+ const {data:tasks,error}=await client.from("tasks")
+  .select("id,title,description,category,reward_paise,task_url")
+  .eq("status","published")
+  .order("created_at",{ascending:false});
+
+ if(error){
+  list.textContent="Unable to load tasks. Please try again.";
+  console.error("Published tasks:",error.message);
+  return;
+ }
+
+ if(!tasks||tasks.length===0){
+  list.innerHTML=`
+   <div class="coming">
+    <span>No active tasks</span>
+    <h4>New tasks coming soon!</h4>
+    <p class="muted">Please check again later.</p>
+   </div>`;
+  return;
+ }
+
+ list.innerHTML=tasks.map(task=>{
+  let taskLink="";
+
+  if(task.task_url){
+   try{
+    const url=new URL(task.task_url);
+    if(url.protocol==="https:"||url.protocol==="http:"){
+     taskLink=`
+      <a class="task-link"
+       href="${escapeHTML(url.href)}"
+       target="_blank"
+       rel="noopener noreferrer">
+       Open Task →
+      </a>`;
+    }
+   }catch{}
+  }
+
+  return `
+   <div class="task-row">
+    <h4>${escapeHTML(task.title)}</h4>
+    <p>${escapeHTML(task.description||"No description")}</p>
+    <p>Category: ${escapeHTML(task.category)}</p>
+    <p>Listed reward: ${rupees(task.reward_paise)}</p>
+    ${taskLink}
+   </div>
+  `;
+ }).join("");
+}
+
 function openWithdrawModal(){
  document.getElementById("withdrawModal")?.classList.remove("hidden");
  showStatus("");
@@ -293,7 +357,7 @@ async function showDashboard(username,user){
    <div class="section-title"><h3>Earn More</h3></div>
    <div class="grid">
     <div class="tile"><div class="tile-icon">📋</div><h4>Surveys</h4><p>Coming soon</p></div>
-    <div class="tile"><div class="tile-icon">🎯</div><h4>Tasks</h4><p>Coming soon</p></div>
+    <div class="tile"><div class="tile-icon">🎯</div><h4>Tasks</h4><p>See Available Tasks below</p></div>
     <div class="tile"><div class="tile-icon">🎮</div><h4>Games</h4><p>Coming soon</p></div>
     <div class="tile"><div class="tile-icon">🎁</div><h4>Rewards</h4><p>Coming soon</p></div>
    </div>
@@ -301,10 +365,8 @@ async function showDashboard(username,user){
 
   <section class="card">
    <h3>Available Tasks</h3>
-   <div class="coming">
-    <span>Coming Soon</span>
-    <h4>No active tasks yet</h4>
-    <p class="muted">Task participation will be enabled in the next update.</p>
+   <div id="availableTasks" class="muted">
+    Loading available tasks...
    </div>
   </section>
 
@@ -362,6 +424,9 @@ async function showDashboard(username,user){
 
  const bal=document.getElementById("bal");
  bal.textContent=rupees(await getBalance(user));
+
+ /* Fetch tasks visible to signed-in users */
+ loadPublishedTasks(user);
 
  const isAdmin=await checkAdminPermission();
  if(isAdmin)document.getElementById("adminOption").classList.remove("hidden");
