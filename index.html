@@ -92,7 +92,9 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .small-btn{border:0;border-radius:9px;padding:10px 6px;font-weight:bold;background:#eee3f8;color:#7138c8;font-size:12px}
 .small-btn.delete{background:#ffe9e9;color:#bd3434}
 .small-btn.pause{background:#fff2d9;color:#9b6810}
+.small-btn.approve{background:#e0f6e8;color:#1f7a45}
 .file-label{display:block;text-align:left;font-size:13px;font-weight:bold;margin:12px 0 2px}
+.proof-img{width:100%;border-radius:10px;margin-top:8px;border:1px solid #eee3f8}
 </style>
 </head>
 <body>
@@ -124,6 +126,12 @@ function escapeHTML(value){
  return String(value??"").replace(/[&<>"']/g,char=>({
  "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
  }[char]));
+}
+function safeHref(value){
+ try{
+  const u=new URL(value);
+  return ["https:","http:"].includes(u.protocol)?u.href:"";
+ }catch{return ""}
 }
 
 function showLogin(){
@@ -221,10 +229,7 @@ function openSubmitModal(task){
   if(!file&&proofText.length<3&&proofUrl.length<5){
    showStatus("Screenshot, text leda link ivvandi.");return;
   }
-  if(proofUrl){
-   try{const u=new URL(proofUrl);if(!["https:","http:"].includes(u.protocol))throw new Error()}
-   catch{showStatus("Sariyaina link ivvandi.");return}
-  }
+  if(proofUrl&&!safeHref(proofUrl)){showStatus("Sariyaina link ivvandi.");return}
 
   const btn=document.getElementById("sendProof");
   btn.disabled=true;
@@ -282,13 +287,9 @@ async function loadPublishedTasks(){
  const labels={pending:"⏳ Pending review",approved:"✅ Approved",rejected:"❌ Rejected"};
  list.innerHTML=tasks.map(task=>{
   let link="";
-  if(task.task_url){
-   try{
-    const url=new URL(task.task_url);
-    if(["https:","http:"].includes(url.protocol)){
-     link=`<a class="task-link" href="${escapeHTML(url.href)}" target="_blank" rel="noopener noreferrer">Open Task →</a>`;
-    }
-   }catch{}
+  const href=safeHref(task.task_url);
+  if(href){
+   link=`<a class="task-link" href="${escapeHTML(href)}" target="_blank" rel="noopener noreferrer">Open Task →</a>`;
   }
   const st=subs[String(task.id)];
   const action=st
@@ -459,7 +460,7 @@ function showAdminDashboard(){
  <section class="admin-head"><h2>Admin Dashboard</h2><p style="margin:0;opacity:.85;font-size:13px">Welcome, ${escapeHTML(currentUsername)}</p></section>
  <section class="admin-item" id="createTasksCard" style="cursor:pointer"><h3>➕ Create Tasks</h3><p class="muted">Create and publish tasks for users.</p><button class="action">Open Create Tasks →</button></section>
  <section class="admin-item"><h3>📋 Your Tasks</h3><div id="adminTaskList" class="muted">Loading tasks...</div></section>
- <section class="admin-item"><h3>📋 Task Approvals</h3><p class="muted">Submission review will be activated next.</p><span class="admin-tag">Coming next</span></section>
+ <section class="admin-item" id="approvalsCard" style="cursor:pointer"><h3>✅ Task Approvals</h3><p class="muted">Review user proofs, approve or reject.</p><button class="action">Open Task Approvals →</button></section>
  <section class="admin-item"><h3>👥 Manage Users</h3><p class="muted">User management will be activated next.</p><span class="admin-tag">Coming next</span></section>
  <section class="admin-item"><h3>💸 Withdrawals</h3><p class="muted">Withdrawal review will be activated next.</p><span class="admin-tag">Coming next</span></section>
  <section class="admin-item"><h3>🔔 Notifications</h3><p class="muted">Notifications will be activated next.</p><span class="admin-tag">Coming next</span></section>`;
@@ -467,6 +468,66 @@ function showAdminDashboard(){
  document.getElementById("backUser").onclick=()=>{adminVerified=false;showDashboard(currentUsername,currentUser)};
  document.getElementById("adminProfile").onclick=()=>{adminVerified=false;showDashboard(currentUsername,currentUser)};
  document.getElementById("createTasksCard").onclick=renderCreateTaskPage;
+ document.getElementById("approvalsCard").onclick=renderApprovalsPage;
+
+ async function renderApprovalsPage(){
+  if(!adminVerified||!currentUser)return;
+  content.innerHTML=`
+   <header class="header"><div class="brand"><div class="logo">✦</div><div><h2>HYY EARN</h2><p>Task Approvals</p></div></div></header>
+   <button class="back-btn" id="backAdmin">← Admin Dashboard</button>
+   <section class="admin-head"><h2>✅ Task Approvals</h2><p style="margin:0;opacity:.85;font-size:13px">Approve cheste reward user wallet ki add avutundi.</p></section>
+   <section class="admin-item"><div id="subList" class="muted">Loading submissions...</div></section>`;
+  document.getElementById("backAdmin").onclick=showAdminDashboard;
+
+  const list=document.getElementById("subList");
+  const {data,error}=await client.rpc("admin_list_submissions");
+  if(error){list.textContent="Unable to load: "+error.message;return}
+  if(!data||!data.length){list.textContent="No submissions yet.";return}
+
+  const urls={};
+  await Promise.all(data.filter(s=>s.proof_path).map(async s=>{
+   const {data:signed}=await client.storage.from("proofs").createSignedUrl(s.proof_path,600);
+   if(signed&&signed.signedUrl)urls[s.id]=signed.signedUrl;
+  }));
+
+  const labels={pending:"⏳ Pending",approved:"✅ Approved",rejected:"❌ Rejected"};
+  list.innerHTML=data.map(s=>{
+   const img=urls[s.id]
+    ?`<a href="${escapeHTML(urls[s.id])}" target="_blank" rel="noopener noreferrer"><img class="proof-img" src="${escapeHTML(urls[s.id])}" alt="Proof screenshot"></a>`
+    :"";
+   const href=safeHref(s.proof_url);
+   const link=href?`<p><a class="task-link" href="${escapeHTML(href)}" target="_blank" rel="noopener noreferrer">Open proof link →</a></p>`:"";
+   const buttons=s.status==="pending"
+    ?`<div class="task-actions">
+       <button class="small-btn approve" data-approve="${escapeHTML(s.id)}">✔ Approve</button>
+       <button class="small-btn delete" data-reject="${escapeHTML(s.id)}">✖ Reject</button>
+      </div>`
+    :"";
+   return `<div class="task-row">
+    <h4>${escapeHTML(s.task_title||"(deleted task)")}</h4>
+    <p>User: ${escapeHTML(s.username||"unknown")}</p>
+    <p>Reward: ${rupees(s.reward_paise)}</p>
+    <p>${escapeHTML(s.proof_text||"No text")}</p>
+    ${link}${img}
+    <div style="margin-top:10px"><span class="task-status">${labels[s.status]||escapeHTML(s.status)}</span></div>
+    ${buttons}
+   </div>`;
+  }).join("");
+
+  async function review(id,approve){
+   const msg=approve
+    ?"Approve cheste reward user wallet ki add avutundi. Continue?"
+    :"Ee submission ni reject cheyala?";
+   if(!confirm(msg))return;
+   showStatus("Updating...");
+   const {error:rErr}=await client.rpc("review_submission",{p_id:id,p_approve:approve});
+   if(rErr){showStatus(rErr.message.includes("Already")?"Already reviewed.":rErr.message);return}
+   showStatus(approve?"Approved! Reward added.":"Rejected.",true);
+   renderApprovalsPage();
+  }
+  list.querySelectorAll("[data-approve]").forEach(b=>{b.onclick=()=>review(b.dataset.approve,true)});
+  list.querySelectorAll("[data-reject]").forEach(b=>{b.onclick=()=>review(b.dataset.reject,false)});
+ }
 
  async function loadAdminTasks(){
   const list=document.getElementById("adminTaskList");
@@ -478,12 +539,13 @@ function showAdminDashboard(){
   if(!data||!data.length){list.textContent="No tasks created yet.";return}
   list.innerHTML=data.map(task=>{
    const paused=task.status==="paused";
+   const href=safeHref(task.task_url);
    return `<div class="task-row">
     <h4>${escapeHTML(task.title)}</h4>
     <p>${escapeHTML(task.description||"No description")}</p>
     <p>Category: ${escapeHTML(task.category)}</p>
     <p>Reward: ${rupees(task.reward_paise)}</p>
-    ${task.task_url?`<p><a href="${escapeHTML(task.task_url)}" target="_blank" rel="noopener noreferrer">Open task link</a></p>`:""}
+    ${href?`<p><a href="${escapeHTML(href)}" target="_blank" rel="noopener noreferrer">Open task link</a></p>`:""}
     <span class="task-status">${escapeHTML(task.status)}</span>
     <div class="task-actions">
      <button class="small-btn" data-edit="${escapeHTML(task.id)}">✏️ Edit</button>
@@ -548,10 +610,7 @@ function showAdminDashboard(){
    const taskUrl=document.getElementById("editUrl").value.trim();
    if(!title){showStatus("Task title enter cheyyi.");return}
    if(!Number.isFinite(reward)||reward<0||reward>100000){showStatus("Valid reward amount enter cheyyi.");return}
-   if(taskUrl){
-    try{const u=new URL(taskUrl);if(!["https:","http:"].includes(u.protocol))throw new Error()}
-    catch{showStatus("Valid task link enter cheyyi.");return}
-   }
+   if(taskUrl&&!safeHref(taskUrl)){showStatus("Valid task link enter cheyyi.");return}
    const btn=document.getElementById("saveEdit");btn.disabled=true;showStatus("Updating...");
    const {error}=await client.from("tasks").update({
     title,description,category,reward_paise:Math.round(reward*100),task_url:taskUrl||null
@@ -588,10 +647,7 @@ function showAdminDashboard(){
    const taskUrl=document.getElementById("taskUrl").value.trim();
    if(!title){showStatus("Task title enter cheyyi.");return}
    if(!Number.isFinite(reward)||reward<0||reward>100000){showStatus("Valid reward amount enter cheyyi.");return}
-   if(taskUrl){
-    try{const u=new URL(taskUrl);if(!["https:","http:"].includes(u.protocol))throw new Error()}
-    catch{showStatus("Valid task link enter cheyyi.");return}
-   }
+   if(taskUrl&&!safeHref(taskUrl)){showStatus("Valid task link enter cheyyi.");return}
    const btn=document.getElementById(taskStatus==="published"?"publishTask":"saveDraft");
    btn.disabled=true;showStatus("Saving task...");
    const {error}=await client.from("tasks").insert({
