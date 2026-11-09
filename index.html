@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -44,6 +45,7 @@ h3{font-size:17px;margin-bottom:8px}
 .check-text h3{margin:0 0 4px;font-size:15px}
 .check-text p{margin:0;font-size:12px;color:#947eac}
 .check-btn{border:0;border-radius:10px;padding:10px 13px;background:#7138c8;color:white;font-weight:bold}
+.checkin-message{margin:8px 0 0 56px;font-size:12px;line-height:1.5}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .tile{border:1px solid #f0e7fa;border-radius:16px;padding:17px;background:#fff;text-align:left;min-height:105px}
 .tile-icon{font-size:25px;margin-bottom:10px}
@@ -101,6 +103,7 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .wd-row b{font-size:17px}
 .wd-row p{margin:4px 0 0;font-size:12px;color:#947eac;overflow-wrap:anywhere}
 .wd-right{text-align:right}
+.history-btn{border:0;background:#f1e8fc;color:#7138c8;padding:9px 12px;border-radius:10px;font-weight:bold;font-size:12px}
 </style>
 </head>
 <body>
@@ -191,23 +194,50 @@ async function getBalance(user){
  return data?data.balance_paise:0;
 }
 
-async function loadWithdrawalHistory(){
+/* Separate Withdrawal History page */
+async function renderWithdrawalHistoryPage(){
+ if(!currentUser)return;
+
+ content.innerHTML=`
+ <header class="header">
+  <div class="brand">
+   <div class="logo">✦</div>
+   <div><h2>HYY EARN</h2><p>Withdrawal History</p></div>
+  </div>
+ </header>
+ <button class="back-btn" id="backToWithdraw">← Back to Withdrawal</button>
+ <section class="admin-head">
+  <h2>Withdrawal History</h2>
+  <p style="margin:0;opacity:.85;font-size:13px">Track all your withdrawal requests.</p>
+ </section>
+ <section class="card">
+  <div id="wdHistory" class="muted">Loading history...</div>
+ </section>`;
+
+ document.getElementById("backToWithdraw").onclick=()=>{
+  showDashboard(currentUsername,currentUser);
+  setTimeout(openWithdrawModal,100);
+ };
+
  const box=document.getElementById("wdHistory");
- if(!box||!currentUser)return;
  const {data,error}=await client.from("withdrawals")
   .select("id,amount_paise,upi_id,status,created_at,reviewed_at")
   .eq("user_id",currentUser.id)
   .order("created_at",{ascending:false})
-  .limit(20);
+  .limit(50);
+
  if(error){box.textContent="Unable to load withdrawal history.";return}
- const bal=document.getElementById("bal");
- if(bal)bal.textContent=rupees(await getBalance(currentUser));
- if(!data||!data.length){box.innerHTML=`<div class="activity">No withdrawals yet</div>`;return}
+ if(!data||!data.length){
+  box.innerHTML=`<div class="activity">No withdrawals yet.</div>`;
+  return;
+ }
+
  const info={
-  pending:{cls:"",label:"⏳ Pending",note:"Admin review lo undi."},
-  paid:{cls:"paid",label:"✅ Success",note:"Payment mee UPI ki pampabadindi."},
-  rejected:{cls:"rejected",label:"❌ Rejected",note:"Amount mee wallet ki thirigi add ayyindi."}
+  pending:{cls:"",label:"⏳ Pending",note:"Your request is under review."},
+  paid:{cls:"paid",label:"✅ Success",note:"Payment has been sent to your UPI ID."},
+  rejected:{cls:"rejected",label:"❌ Rejected",note:"The amount has been returned to your wallet."}
  };
+
  box.innerHTML=data.map(w=>{
   const i=info[w.status]||{cls:"",label:escapeHTML(w.status),note:""};
   const when=new Date(w.reviewed_at||w.created_at).toLocaleString();
@@ -215,7 +245,7 @@ async function loadWithdrawalHistory(){
    <div>
     <b>${rupees(w.amount_paise)}</b>
     <p>UPI: ${escapeHTML(w.upi_id)}</p>
-    <p>${escapeHTML(i.note)}</p>
+    <p>${i.note}</p>
    </div>
    <div class="wd-right">
     <span class="task-status ${i.cls}">${i.label}</span>
@@ -239,10 +269,10 @@ function openSubmitModal(task){
    <p class="muted" id="submitTitle"></p>
    <label class="file-label" for="proofFile">📸 Screenshot upload</label>
    <input id="proofFile" type="file" accept="image/jpeg,image/png,image/webp">
-   <p class="muted" id="fileInfo">JPG, PNG leda WebP. Max 5 MB.</p>
-   <textarea id="proofText" maxlength="1000" placeholder="Em chesaru? (optional details)"></textarea>
+   <p class="muted" id="fileInfo">JPG, PNG or WebP. Max 5 MB.</p>
+   <textarea id="proofText" maxlength="1000" placeholder="Describe what you completed (optional details)"></textarea>
    <input id="proofUrl" type="url" maxlength="500" placeholder="Proof link (optional)">
-   <div class="modal-note">Admin check chesi approve chestaru. Okka task ki okasari matrame submit cheyagalaru.</div>
+   <div class="modal-note">The admin will review your submission. You can submit each task only once.</div>
    <button class="action" id="sendProof">Submit</button>
   </div>`;
  document.body.appendChild(box);
@@ -253,7 +283,7 @@ function openSubmitModal(task){
  document.getElementById("proofFile").onchange=e=>{
   const f=e.target.files[0];
   const info=document.getElementById("fileInfo");
-  if(!f){info.textContent="JPG, PNG leda WebP. Max 5 MB.";return}
+  if(!f){info.textContent="JPG, PNG or WebP. Max 5 MB.";return}
   info.textContent="Selected: "+f.name+" ("+(f.size/1024/1024).toFixed(2)+" MB)";
  };
 
@@ -263,18 +293,18 @@ function openSubmitModal(task){
   const file=document.getElementById("proofFile").files[0];
 
   if(file){
-   if(!IMAGE_TYPES[file.type]){showStatus("JPG, PNG leda WebP image matrame.");return}
-   if(file.size>5*1024*1024){showStatus("Image 5 MB kante takkuva undali.");return}
+   if(!IMAGE_TYPES[file.type]){showStatus("Only JPG, PNG or WebP images are allowed.");return}
+   if(file.size>5*1024*1024){showStatus("Image must be smaller than 5 MB.");return}
   }
   if(!file&&proofText.length<3&&proofUrl.length<5){
-   showStatus("Screenshot, text leda link ivvandi.");return;
+   showStatus("Please provide a screenshot, text or link.");return;
   }
-  if(proofUrl&&!safeHref(proofUrl)){showStatus("Sariyaina link ivvandi.");return}
+  if(proofUrl&&!safeHref(proofUrl)){showStatus("Please enter a valid link.");return}
 
   const btn=document.getElementById("sendProof");
   btn.disabled=true;
-
   let path=null;
+
   if(file){
    showStatus("Uploading screenshot...");
    path=currentUser.id+"/"+crypto.randomUUID()+"."+IMAGE_TYPES[file.type];
@@ -297,11 +327,11 @@ function openSubmitModal(task){
   });
   btn.disabled=false;
   if(error){
-   showStatus(error.message.includes("Already")?"Ee task ki already submit chesaru.":error.message);
+   showStatus(error.message.includes("Already")?"You have already submitted this task.":error.message);
    return;
   }
   box.remove();
-  showStatus("Proof submitted! Admin review chestaru.",true);
+  showStatus("Proof submitted! The admin will review it.",true);
   loadPublishedTasks();
  };
 }
@@ -311,11 +341,9 @@ async function loadPublishedTasks(){
  if(!list)return;
  list.textContent="Loading available tasks...";
  const [tasksRes,subsRes]=await Promise.all([
-  client.from("tasks")
-   .select("id,title,description,category,reward_paise,task_url")
+  client.from("tasks").select("id,title,description,category,reward_paise,task_url")
    .eq("status","published").order("created_at",{ascending:false}),
-  client.from("task_submissions")
-   .select("task_id,status").eq("user_id",currentUser.id)
+  client.from("task_submissions").select("task_id,status").eq("user_id",currentUser.id)
  ]);
  const tasks=tasksRes.data;
  if(tasksRes.error){list.textContent="Unable to load tasks. Please try again.";return}
@@ -326,15 +354,11 @@ async function loadPublishedTasks(){
  (subsRes.data||[]).forEach(s=>{subs[String(s.task_id)]=s.status});
  const labels={pending:"⏳ Pending review",approved:"✅ Approved",rejected:"❌ Rejected"};
  list.innerHTML=tasks.map(task=>{
-  let link="";
   const href=safeHref(task.task_url);
-  if(href){
-   link=`<a class="task-link" href="${escapeHTML(href)}" target="_blank" rel="noopener noreferrer">Open Task →</a>`;
-  }
+  const link=href?`<a class="task-link" href="${escapeHTML(href)}" target="_blank" rel="noopener noreferrer">Open Task →</a>`:"";
   const st=subs[String(task.id)];
-  const action=st
-   ?`<span class="task-status">${labels[st]||escapeHTML(st)}</span>`
-   :`<button class="small-btn" data-submit="${escapeHTML(task.id)}">Submit Proof</button>`;
+  const action=st?`<span class="task-status">${labels[st]||escapeHTML(st)}</span>`:
+   `<button class="small-btn" data-submit="${escapeHTML(task.id)}">Submit Proof</button>`;
   return `<div class="task-row">
    <h4>${escapeHTML(task.title)}</h4>
    <p>${escapeHTML(task.description||"No description")}</p>
@@ -384,7 +408,12 @@ async function showDashboard(username,user){
  </section>
  <section class="card">
   <div class="section-title"><h3>Daily Check-in</h3><span>🎁</span></div>
-  <div class="checkin"><div class="check-icon">📅</div><div class="check-text"><h3>Daily reward</h3><p>Check in every day</p></div><button class="check-btn" id="checkin">Check in</button></div>
+  <div class="checkin">
+   <div class="check-icon">📅</div>
+   <div class="check-text"><h3>Daily Reward</h3><p>Check in every day</p></div>
+   <button class="check-btn" id="checkin">Check In</button>
+  </div>
+  <p id="checkinMessage" class="checkin-message"></p>
  </section>
  <section class="card"><div class="section-title"><h3>Earn More</h3></div>
   <div class="grid">
@@ -395,23 +424,31 @@ async function showDashboard(username,user){
   </div>
  </section>
  <section class="card"><h3>Available Tasks</h3><div id="availableTasks" class="muted">Loading available tasks...</div></section>
- <section class="card"><h3>Withdrawal History</h3><div id="wdHistory" class="muted">Loading...</div></section>
  <section class="card"><div class="referral"><h3>Refer & Earn 🎉</h3><p class="muted">Referral rewards are coming soon.</p></div></section>
  <section class="card"><h3>Recent Activity</h3><div class="activity">No activity yet</div></section>
+
  <div class="modal-overlay hidden" id="withdrawModal"><div class="modal">
-  <div class="modal-header"><h3>Withdraw Request</h3><button class="close-btn" id="closeWithdraw">×</button></div>
+  <div class="modal-header">
+   <h3>Withdraw</h3>
+   <div style="display:flex;gap:8px;align-items:center">
+    <button class="history-btn" id="openWdHistory">History ↗</button>
+    <button class="close-btn" id="closeWithdraw">×</button>
+   </div>
+  </div>
   <p class="muted">Enter your withdrawal amount and UPI ID.</p>
   <div class="modal-note">Minimum withdrawal ₹100. This sends a request only; it does not transfer money automatically.</div>
   <input id="wamount" type="number" min="100" placeholder="Amount (₹)">
   <input id="wupi" placeholder="UPI ID (name@bank)">
   <button class="action" id="withdrawSubmit">Send Request</button>
  </div></div>
+
  <div class="modal-overlay hidden" id="adminPasswordModal"><div class="modal">
   <div class="modal-header"><h3>Admin Verification</h3><button class="close-btn" id="closeAdmin">×</button></div>
   <p class="muted">Enter your admin password to continue.</p>
   <input id="adminPassword" type="password" placeholder="Admin password" autocomplete="current-password">
   <button class="action" id="adminLoginSubmit">Verify & Continue</button><p id="adminError" class="muted"></p>
  </div></div>
+
  <nav class="bottom-nav"><div class="nav-inner">
   <button class="nav-item active" data-tab="home"><span>⌂</span>Home</button>
   <button class="nav-item" data-tab="offers"><span>▣</span>Offers</button>
@@ -423,7 +460,6 @@ async function showDashboard(username,user){
  document.getElementById("menuUsername").textContent="Username: "+username;
  document.getElementById("bal").textContent=rupees(await getBalance(user));
  loadPublishedTasks();
- loadWithdrawalHistory();
 
  if(await checkAdminPermission())document.getElementById("adminOption").classList.remove("hidden");
 
@@ -456,32 +492,60 @@ async function showDashboard(username,user){
   if(error){showStatus(error.message);return}
   showLogin();showStatus("");
  };
+
  document.getElementById("notifications").onclick=()=>{
   showStatus("Refreshing...");
-  loadWithdrawalHistory().then(()=>showStatus("Updated.",true));
+  loadPublishedTasks().then(()=>showStatus("Updated.",true));
  };
+
  document.getElementById("goWithdraw").onclick=openWithdrawModal;
  document.getElementById("closeWithdraw").onclick=closeWithdrawModal;
+ document.getElementById("openWdHistory").onclick=()=>{
+  closeWithdrawModal();
+  renderWithdrawalHistoryPage();
+ };
  document.getElementById("withdrawModal").onclick=e=>{if(e.target.id==="withdrawModal")closeWithdrawModal()};
 
  document.getElementById("checkin").onclick=async()=>{
-  const btn=document.getElementById("checkin");btn.disabled=true;showStatus("Checking in...");
-  const {data,error}=await client.rpc("daily_checkin");btn.disabled=false;
-  if(error){showStatus(error.message.includes("Already")?"Ee roju check-in ayyindi. Repu malli randi!":error.message);return}
-  document.getElementById("bal").textContent=rupees(data);showStatus("Check-in successful!",true);
+  const btn=document.getElementById("checkin");
+  const msg=document.getElementById("checkinMessage");
+  btn.disabled=true;
+  msg.textContent="Checking in...";
+  msg.style.color="#947eac";
+
+  const {data,error}=await client.rpc("daily_checkin");
+  btn.disabled=false;
+
+  if(error){
+   msg.textContent=error.message.includes("Already")
+    ?"You've already checked in today. Come back tomorrow!"
+    :error.message;
+   msg.style.color="#c0392b";
+   return;
+  }
+
+  document.getElementById("bal").textContent=rupees(data);
+  msg.textContent="Check-in successful! Your reward has been added.";
+  msg.style.color="#25834d";
  };
 
  document.getElementById("withdrawSubmit").onclick=async()=>{
   const amount=Math.round(Number(document.getElementById("wamount").value)*100);
   const upi=document.getElementById("wupi").value.trim();
   if(!amount||amount<10000){showStatus("Minimum withdrawal ₹100");return}
-  if(!/^[\w.\-]{2,}@[\w]{2,}$/.test(upi)){showStatus("Sariyaina UPI ID ivvandi (name@bank)");return}
-  const btn=document.getElementById("withdrawSubmit");btn.disabled=true;showStatus("Sending...");
-  const {error}=await client.rpc("request_withdrawal",{p_amount:amount,p_upi:upi});btn.disabled=false;
+  if(!/^[\w.\-]{2,}@[\w]{2,}$/.test(upi)){showStatus("Please enter a valid UPI ID (name@bank).");return}
+
+  const btn=document.getElementById("withdrawSubmit");
+  btn.disabled=true;showStatus("Sending...");
+  const {error}=await client.rpc("request_withdrawal",{p_amount:amount,p_upi:upi});
+  btn.disabled=false;
   if(error){showStatus(error.message);return}
-  closeWithdrawModal();document.getElementById("wamount").value="";document.getElementById("wupi").value="";
-  await loadWithdrawalHistory();
-  showStatus("Request sent!",true);
+
+  closeWithdrawModal();
+  document.getElementById("wamount").value="";
+  document.getElementById("wupi").value="";
+  document.getElementById("bal").textContent=rupees(await getBalance(currentUser));
+  showStatus("Withdrawal request submitted successfully!",true);
  };
 
  document.querySelectorAll(".nav-item").forEach(btn=>{
@@ -521,7 +585,7 @@ function showAdminDashboard(){
   content.innerHTML=`
    <header class="header"><div class="brand"><div class="logo">✦</div><div><h2>HYY EARN</h2><p>Withdrawals</p></div></div></header>
    <button class="back-btn" id="backAdmin">← Admin Dashboard</button>
-   <section class="admin-head"><h2>💸 Withdrawals</h2><p style="margin:0;opacity:.85;font-size:13px">UPI ki manual ga pay chesaka matrame Paid nokkandi.</p></section>
+   <section class="admin-head"><h2>💸 Withdrawals</h2><p style="margin:0;opacity:.85;font-size:13px">Only mark as Paid after manually sending the payment.</p></section>
    <section class="admin-item"><div id="wdList" class="muted">Loading requests...</div></section>`;
   document.getElementById("backAdmin").onclick=showAdminDashboard;
 
@@ -536,8 +600,7 @@ function showAdminDashboard(){
     ?`<div class="task-actions">
        <button class="small-btn approve" data-paid="${escapeHTML(w.id)}">✔ Mark Paid</button>
        <button class="small-btn delete" data-rej="${escapeHTML(w.id)}">✖ Reject</button>
-      </div>`
-    :"";
+      </div>`:"";
    return `<div class="task-row">
     <h4>${rupees(w.amount_paise)}</h4>
     <p>User: ${escapeHTML(w.username||"unknown")}</p>
@@ -550,8 +613,8 @@ function showAdminDashboard(){
 
   async function reviewWd(id,paid){
    const msg=paid
-    ?"UPI ki pay chesaara? Paid ani mark cheyala?"
-    :"Reject cheste amount user wallet ki thirigi vastundi. Continue?";
+    ?"Have you sent the payment to the UPI ID? Mark as Paid?"
+    :"Rejecting this request will return the amount to the user's wallet. Continue?";
    if(!confirm(msg))return;
    showStatus("Updating...");
    const {error:rErr}=await client.rpc("review_withdrawal",{p_id:Number(id),p_paid:paid});
@@ -568,7 +631,7 @@ function showAdminDashboard(){
   content.innerHTML=`
    <header class="header"><div class="brand"><div class="logo">✦</div><div><h2>HYY EARN</h2><p>Task Approvals</p></div></div></header>
    <button class="back-btn" id="backAdmin">← Admin Dashboard</button>
-   <section class="admin-head"><h2>✅ Task Approvals</h2><p style="margin:0;opacity:.85;font-size:13px">Approve cheste reward user wallet ki add avutundi.</p></section>
+   <section class="admin-head"><h2>✅ Task Approvals</h2><p style="margin:0;opacity:.85;font-size:13px">Approving a submission will add the reward to the user's wallet.</p></section>
    <section class="admin-item"><div id="subList" class="muted">Loading submissions...</div></section>`;
   document.getElementById("backAdmin").onclick=showAdminDashboard;
 
@@ -585,17 +648,14 @@ function showAdminDashboard(){
 
   const labels={pending:"⏳ Pending",approved:"✅ Approved",rejected:"❌ Rejected"};
   list.innerHTML=data.map(s=>{
-   const img=urls[s.id]
-    ?`<a href="${escapeHTML(urls[s.id])}" target="_blank" rel="noopener noreferrer"><img class="proof-img" src="${escapeHTML(urls[s.id])}" alt="Proof screenshot"></a>`
-    :"";
+   const img=urls[s.id]?`<a href="${escapeHTML(urls[s.id])}" target="_blank" rel="noopener noreferrer"><img class="proof-img" src="${escapeHTML(urls[s.id])}" alt="Proof screenshot"></a>`:"";
    const href=safeHref(s.proof_url);
    const link=href?`<p><a class="task-link" href="${escapeHTML(href)}" target="_blank" rel="noopener noreferrer">Open proof link →</a></p>`:"";
    const buttons=s.status==="pending"
     ?`<div class="task-actions">
        <button class="small-btn approve" data-approve="${escapeHTML(s.id)}">✔ Approve</button>
        <button class="small-btn delete" data-reject="${escapeHTML(s.id)}">✖ Reject</button>
-      </div>`
-    :"";
+      </div>`:"";
    return `<div class="task-row">
     <h4>${escapeHTML(s.task_title||"(deleted task)")}</h4>
     <p>User: ${escapeHTML(s.username||"unknown")}</p>
@@ -609,8 +669,8 @@ function showAdminDashboard(){
 
   async function review(id,approve){
    const msg=approve
-    ?"Approve cheste reward user wallet ki add avutundi. Continue?"
-    :"Ee submission ni reject cheyala?";
+    ?"Approving this submission will add the reward to the user's wallet. Continue?"
+    :"Are you sure you want to reject this submission?";
    if(!confirm(msg))return;
    showStatus("Updating...");
    const {error:rErr}=await client.rpc("review_submission",{p_id:id,p_approve:approve});
@@ -701,9 +761,9 @@ function showAdminDashboard(){
    const category=document.getElementById("editCategory").value.trim()||"General";
    const reward=Number(document.getElementById("editReward").value);
    const taskUrl=document.getElementById("editUrl").value.trim();
-   if(!title){showStatus("Task title enter cheyyi.");return}
-   if(!Number.isFinite(reward)||reward<0||reward>100000){showStatus("Valid reward amount enter cheyyi.");return}
-   if(taskUrl&&!safeHref(taskUrl)){showStatus("Valid task link enter cheyyi.");return}
+   if(!title){showStatus("Please enter a task title.");return}
+   if(!Number.isFinite(reward)||reward<0||reward>100000){showStatus("Please enter a valid reward amount.");return}
+   if(taskUrl&&!safeHref(taskUrl)){showStatus("Please enter a valid task link.");return}
    const btn=document.getElementById("saveEdit");btn.disabled=true;showStatus("Updating...");
    const {error}=await client.from("tasks").update({
     title,description,category,reward_paise:Math.round(reward*100),task_url:taskUrl||null
@@ -738,9 +798,9 @@ function showAdminDashboard(){
    const category=document.getElementById("taskCategory").value.trim()||"General";
    const reward=Number(document.getElementById("taskReward").value);
    const taskUrl=document.getElementById("taskUrl").value.trim();
-   if(!title){showStatus("Task title enter cheyyi.");return}
-   if(!Number.isFinite(reward)||reward<0||reward>100000){showStatus("Valid reward amount enter cheyyi.");return}
-   if(taskUrl&&!safeHref(taskUrl)){showStatus("Valid task link enter cheyyi.");return}
+   if(!title){showStatus("Please enter a task title.");return}
+   if(!Number.isFinite(reward)||reward<0||reward>100000){showStatus("Please enter a valid reward amount.");return}
+   if(taskUrl&&!safeHref(taskUrl)){showStatus("Please enter a valid task link.");return}
    const btn=document.getElementById(taskStatus==="published"?"publishTask":"saveDraft");
    btn.disabled=true;showStatus("Saving task...");
    const {error}=await client.from("tasks").insert({
