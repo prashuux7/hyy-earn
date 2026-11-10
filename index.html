@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -103,16 +104,8 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .wd-row p{margin:4px 0 0;font-size:12px;color:#947eac;overflow-wrap:anywhere}
 .wd-right{text-align:right}
 .history-btn{border:0;background:#f1e8fc;color:#7138c8;padding:9px 12px;border-radius:10px;font-weight:bold;font-size:12px}
-
-/* Manage Users styles */
-.user-summary{background:#f5effc;border-radius:14px;padding:16px;margin-bottom:14px}
-.user-summary strong{display:block;font-size:28px;color:#7138c8;margin-top:5px}
-.user-id{font-size:11px;color:#947eac;overflow-wrap:anywhere;line-height:1.5;margin-top:6px}
-.user-balance{font-size:17px;font-weight:bold;color:#7138c8;margin-top:8px}
-.search-label{font-size:12px;color:#80669d;font-weight:bold}
 </style>
 </head>
-
 <body>
 <div class="app">
  <div id="content">Loading...</div>
@@ -228,12 +221,12 @@ async function renderWithdrawalHistoryPage(){
 
  const box=document.getElementById("wdHistory");
  const {data,error}=await client.from("withdrawals")
-  .select("id,amount_paise,upi_id,status,created_at,reviewed_at")
+  .select("id,full_name,amount_paise,upi_id,status,created_at,reviewed_at")
   .eq("user_id",currentUser.id)
   .order("created_at",{ascending:false})
   .limit(50);
 
- if(error){box.textContent="Unable to load withdrawal history.";return}
+ if(error){box.textContent="Unable to load withdrawal history: "+error.message;return}
  if(!data||!data.length){
   box.innerHTML=`<div class="activity">No withdrawals yet.</div>`;
   return;
@@ -241,7 +234,7 @@ async function renderWithdrawalHistoryPage(){
 
  const info={
   pending:{cls:"",label:"⏳ Pending",note:"Your request is under review."},
-  paid:{cls:"paid",label:"✅ Success",note:"Payment has been sent to your UPI ID."},
+  paid:{cls:"paid",label:"✅ Success",note:"Payment has been marked as sent."},
   rejected:{cls:"rejected",label:"❌ Rejected",note:"The amount has been returned to your wallet."}
  };
 
@@ -251,6 +244,7 @@ async function renderWithdrawalHistoryPage(){
   return `<div class="wd-row">
    <div>
     <b>${rupees(w.amount_paise)}</b>
+    <p>Full Name: ${escapeHTML(w.full_name||"Not available")}</p>
     <p>UPI: ${escapeHTML(w.upi_id)}</p>
     <p>${i.note}</p>
    </div>
@@ -262,7 +256,8 @@ async function renderWithdrawalHistoryPage(){
  }).join("");
 }
 
-const IMAGE_TYPES={"image/jpeg":"jpg","image/png":"png","image/webp": "webp"};
+const IMAGE_TYPES={"image/jpeg":"jpg","image/png":"png","image/webp":{}};
+IMAGE_TYPES["image/webp"]="webp";
 
 function openSubmitModal(task){
  const old=document.getElementById("submitModal");
@@ -279,7 +274,7 @@ function openSubmitModal(task){
    <p class="muted" id="fileInfo">JPG, PNG or WebP. Max 5 MB.</p>
    <textarea id="proofText" maxlength="1000" placeholder="Describe what you completed (optional details)"></textarea>
    <input id="proofUrl" type="url" maxlength="500" placeholder="Proof link (optional)">
-   <div class="modal-note">The admin will review your submission. You can submit each task only once.</div>
+   <div class="modal-note">The admin will review your submission. You can submit each task only once. Never share passwords or OTPs.</div>
    <button class="action" id="sendProof">Submit</button>
   </div>`;
  document.body.appendChild(box);
@@ -442,10 +437,11 @@ async function showDashboard(username,user){
     <button class="close-btn" id="closeWithdraw">×</button>
    </div>
   </div>
-  <p class="muted">Enter your withdrawal amount and UPI ID.</p>
+  <p class="muted">Enter your full name, withdrawal amount and UPI ID.</p>
   <div class="modal-note">Minimum withdrawal ₹100. This sends a request only; it does not transfer money automatically.</div>
-  <input id="wamount" type="number" min="100" placeholder="Amount (₹)">
-  <input id="wupi" placeholder="UPI ID (name@bank)">
+  <input id="wfullname" type="text" maxlength="100" autocomplete="name" placeholder="Full Name">
+  <input id="wamount" type="number" min="100" step="0.01" placeholder="Amount (₹)">
+  <input id="wupi" type="text" maxlength="100" placeholder="UPI ID (name@bank)">
   <button class="action" id="withdrawSubmit">Send Request</button>
  </div></div>
 
@@ -537,18 +533,34 @@ async function showDashboard(username,user){
  };
 
  document.getElementById("withdrawSubmit").onclick=async()=>{
+  const fullName=document.getElementById("wfullname").value.trim();
   const amount=Math.round(Number(document.getElementById("wamount").value)*100);
   const upi=document.getElementById("wupi").value.trim();
-  if(!amount||amount<10000){showStatus("Minimum withdrawal ₹100");return}
-  if(!/^[\w.\-]{2,}@[\w]{2,}$/.test(upi)){showStatus("Please enter a valid UPI ID (name@bank).");return}
+
+  if(fullName.length<2||fullName.length>100){
+   showStatus("Please enter your full name.");return;
+  }
+  if(!amount||amount<10000){
+   showStatus("Minimum withdrawal ₹100");return;
+  }
+  if(!/^[\w.\-]{2,}@[\w]{2,}$/.test(upi)){
+   showStatus("Please enter a valid UPI ID (name@bank).");return;
+  }
 
   const btn=document.getElementById("withdrawSubmit");
   btn.disabled=true;showStatus("Sending...");
-  const {error}=await client.rpc("request_withdrawal",{p_amount:amount,p_upi:upi});
+
+  const {error}=await client.rpc("request_withdrawal",{
+   p_amount:amount,
+   p_upi:upi,
+   p_full_name:fullName
+  });
+
   btn.disabled=false;
   if(error){showStatus(error.message);return}
 
   closeWithdrawModal();
+  document.getElementById("wfullname").value="";
   document.getElementById("wamount").value="";
   document.getElementById("wupi").value="";
   document.getElementById("bal").textContent=rupees(await getBalance(currentUser));
@@ -578,11 +590,7 @@ function showAdminDashboard(){
  <section class="admin-item"><h3>📋 Your Tasks</h3><div id="adminTaskList" class="muted">Loading tasks...</div></section>
  <section class="admin-item" id="approvalsCard" style="cursor:pointer"><h3>✅ Task Approvals</h3><p class="muted">Review user proofs, approve or reject.</p><button class="action">Open Task Approvals →</button></section>
  <section class="admin-item" id="withdrawalsCard" style="cursor:pointer"><h3>💸 Withdrawals</h3><p class="muted">Review withdrawal requests, mark paid or reject.</p><button class="action">Open Withdrawals →</button></section>
- <section class="admin-item" id="manageUsersCard" style="cursor:pointer">
-  <h3>👥 Manage Users</h3>
-  <p class="muted">View registered users and their wallet balances.</p>
-  <button class="action">Open Manage Users →</button>
- </section>
+ <section class="admin-item"><h3>👥 Manage Users</h3><p class="muted">User management will be activated next.</p><span class="admin-tag">Coming next</span></section>
  <section class="admin-item"><h3>🔔 Notifications</h3><p class="muted">Notifications will be activated next.</p><span class="admin-tag">Coming next</span></section>`;
 
  document.getElementById("backUser").onclick=()=>{adminVerified=false;showDashboard(currentUsername,currentUser)};
@@ -590,88 +598,6 @@ function showAdminDashboard(){
  document.getElementById("createTasksCard").onclick=renderCreateTaskPage;
  document.getElementById("approvalsCard").onclick=renderApprovalsPage;
  document.getElementById("withdrawalsCard").onclick=renderWithdrawalsPage;
- document.getElementById("manageUsersCard").onclick=renderManageUsersPage;
-
- /* Manage Users page */
- async function renderManageUsersPage(){
-  if(!adminVerified||!currentUser)return;
-
-  content.innerHTML=`
-   <header class="header">
-    <div class="brand">
-     <div class="logo">✦</div>
-     <div><h2>HYY EARN</h2><p>Manage Users</p></div>
-    </div>
-   </header>
-   <button class="back-btn" id="backAdmin">← Admin Dashboard</button>
-   <section class="admin-head">
-    <h2>👥 Manage Users</h2>
-    <p style="margin:0;opacity:.85;font-size:13px">Registered user accounts and wallet overview.</p>
-   </section>
-   <section class="admin-item">
-    <div class="user-summary">
-     <span class="muted">Total registered users</span>
-     <strong id="totalUsers">...</strong>
-    </div>
-    <label class="search-label" for="userSearch">Search username or User ID</label>
-    <input id="userSearch" type="search" placeholder="Type username or user ID">
-    <div id="usersList" class="muted">Loading users...</div>
-   </section>`;
-
-  document.getElementById("backAdmin").onclick=showAdminDashboard;
-
-  const list=document.getElementById("usersList");
-  const total=document.getElementById("totalUsers");
-  const search=document.getElementById("userSearch");
-
-  const {data,error}=await client.rpc("admin_list_users");
-
-  if(!adminVerified)return;
-
-  if(error){
-   list.textContent="Unable to load users: "+error.message;
-   total.textContent="—";
-   return;
-  }
-
-  const users=Array.isArray(data)?data:[];
-  total.textContent=users.length;
-
-  if(!users.length){
-   list.innerHTML=`<div class="activity">No registered users found.</div>`;
-   return;
-  }
-
-  function renderUsers(filter=""){
-   const term=filter.trim().toLowerCase();
-
-   const filtered=users.filter(user=>{
-    const username=String(user.username||"").toLowerCase();
-    const userId=String(user.user_id||"").toLowerCase();
-    return username.includes(term)||userId.includes(term);
-   });
-
-   if(!filtered.length){
-    list.innerHTML=`<div class="activity">No matching users found.</div>`;
-    return;
-   }
-
-   list.innerHTML=filtered.map((user,index)=>`
-    <div class="task-row">
-     <h4>${index+1}. ${escapeHTML(user.username||"No username")}</h4>
-     <p>User ID</p>
-     <div class="user-id">${escapeHTML(user.user_id)}</div>
-     <div class="user-balance">Wallet: ${rupees(user.balance_paise)}</div>
-    </div>
-   `).join("");
-  }
-
-  renderUsers();
-
-  search.addEventListener("input",()=>{
-   renderUsers(search.value);
-  });
- }
 
  async function renderWithdrawalsPage(){
   if(!adminVerified||!currentUser)return;
@@ -696,6 +622,7 @@ function showAdminDashboard(){
       </div>`:"";
    return `<div class="task-row">
     <h4>${rupees(w.amount_paise)}</h4>
+    <p>Full Name: ${escapeHTML(w.full_name||"Not returned by admin function")}</p>
     <p>User: ${escapeHTML(w.username||"unknown")}</p>
     <p>UPI: ${escapeHTML(w.upi_id)}</p>
     <p>${escapeHTML(new Date(w.created_at).toLocaleString())}</p>
@@ -788,7 +715,7 @@ function showAdminDashboard(){
    const href=safeHref(task.task_url);
    return `<div class="task-row">
     <h4>${escapeHTML(task.title)}</h4>
-    <p>${escapeHTML(task.description||"No description")}</p>
+    <p>${escapeHTML(task.description||"")}</p>
     <p>Category: ${escapeHTML(task.category)}</p>
     <p>Reward: ${rupees(task.reward_paise)}</p>
     ${href?`<p><a href="${escapeHTML(href)}" target="_blank" rel="noopener noreferrer">Open task link</a></p>`:""}
