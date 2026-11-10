@@ -7,960 +7,748 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{box-sizing:border-box}
-body{margin:0;background:#f5eaff;color:#321064;font-family:Arial,sans-serif;padding:18px 12px 90px}
-.app{max-width:480px;margin:auto}
-.header{display:flex;align-items:center;justify-content:space-between;padding:12px 5px 20px}
-.brand{display:flex;align-items:center;gap:10px}
-.logo{width:43px;height:43px;border-radius:14px;background:#7138c8;color:white;display:grid;place-items:center;font-size:25px;font-weight:bold}
-.brand h2{margin:0;font-size:20px}
-.brand p{margin:4px 0 0;color:#866ca8;font-size:11px}
-.header-actions{display:flex;gap:8px;align-items:center}
-.icon-btn{border:0;background:white;border-radius:13px;width:43px;height:43px;font-size:20px;color:#7138c8}
-.profile-wrap{position:relative}
-.profile-menu{position:absolute;right:0;top:52px;width:210px;background:white;padding:15px;border-radius:14px;box-shadow:0 5px 25px #32106425;z-index:10;text-align:left}
-.profile-menu p{font-size:13px;overflow-wrap:anywhere;margin:0 0 12px}
-.profile-menu button{width:100%;padding:11px;border:0;border-radius:9px;background:#7138c8;color:white;margin-top:7px}
-.profile-menu .logout-btn{background:#f3eafa;color:#7138c8}
+body{margin:0;background:#f5eaff;color:#321064;font-family:Arial,sans-serif}
+button,input,textarea,select{font:inherit}
+button{cursor:pointer;border:0}
+header{background:#6d28d9;color:white;padding:16px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:5}
+header h2{margin:0;font-size:21px}
+.wrap{max-width:650px;margin:auto;padding:16px;padding-bottom:95px}
+.card{background:white;padding:17px;border-radius:18px;margin:12px 0;box-shadow:0 3px 12px #32106412}
+.hero{background:linear-gradient(135deg,#6d28d9,#9333ea);color:white}
+.big{font-size:30px;font-weight:bold;margin:8px 0}
+.muted{color:#806d9b;font-size:13px}
+.btn{background:#6d28d9;color:white;padding:12px 16px;border-radius:11px;font-weight:bold}
+.btn.light{background:#eee5ff;color:#5b21b6}
+.btn.red{background:#dc2626;color:white}
+.btn.green{background:#16a34a;color:white}
+.btn.small{padding:8px 11px;font-size:13px;margin:3px}
+input,textarea,select{width:100%;padding:12px;border:1px solid #ded3ef;border-radius:10px;margin:7px 0 13px;background:#fff;color:#321064}
+textarea{min-height:85px;resize:vertical}
+label{font-size:13px;font-weight:bold}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.tile{background:#fff;border-radius:15px;padding:16px;text-align:center;font-weight:bold;cursor:pointer}
+.nav{position:fixed;bottom:0;left:0;right:0;background:white;display:flex;justify-content:space-around;padding:9px 2px calc(9px + env(safe-area-inset-bottom));box-shadow:0 -3px 15px #32106418;z-index:8}
+.nav button{background:transparent;color:#806d9b;font-size:11px;display:flex;flex-direction:column;align-items:center;gap:4px;flex:1}
+.nav button.active{color:#6d28d9;font-weight:bold}
+.nav span{font-size:20px}
 .hidden{display:none!important}
-.card{background:white;border-radius:20px;padding:20px;margin-bottom:15px;box-shadow:0 5px 20px rgba(75,30,120,.06)}
-.greeting{font-size:14px;color:#866ca8;margin:4px 0 5px}
-h2,h3,h4,p{margin-top:0}
-h2{font-size:22px;margin-bottom:15px}
-h3{font-size:17px;margin-bottom:8px}
-.muted{color:#947eac;font-size:13px;line-height:1.5}
-.wallet{background:linear-gradient(135deg,#7138c8,#a45be8);color:white;padding:23px;border-radius:22px;margin-bottom:16px;box-shadow:0 8px 22px #7138c833}
-.wallet-top{display:flex;justify-content:space-between;align-items:center}
-.wallet-label{font-size:13px;opacity:.85}
-.wallet-icon{font-size:25px}
-.amount{font-size:34px;font-weight:bold;margin:15px 0 18px}
-.wallet-bottom{display:flex;align-items:center;justify-content:space-between}
-.wallet-bottom small{opacity:.8}
-.primary-btn{background:white;color:#7138c8;border:0;border-radius:12px;padding:12px 17px;font-weight:bold}
-.section-title{display:flex;justify-content:space-between;align-items:center}
-.section-title h3{margin:0 0 14px}
-.checkin{display:flex;align-items:center;gap:13px;background:#fff9e9;border:1px solid #f5e6bd;border-radius:16px;padding:15px}
-.check-icon{width:43px;height:43px;border-radius:13px;background:#ffe7a3;display:grid;place-items:center;font-size:22px}
-.check-text{flex:1}
-.check-text h3{margin:0 0 4px;font-size:15px}
-.check-text p{margin:0;font-size:12px;color:#947eac}
-.check-btn{border:0;border-radius:10px;padding:10px 13px;background:#7138c8;color:white;font-weight:bold}
-.checkin-message{margin:8px 0 0 56px;font-size:12px;line-height:1.5}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.tile{border:1px solid #f0e7fa;border-radius:16px;padding:17px;background:#fff;text-align:left;min-height:105px}
-.tile-icon{font-size:25px;margin-bottom:10px}
-.tile h4{font-size:14px;margin:0 0 5px}
-.tile p{font-size:11px;color:#947eac;margin:0}
-.coming{background:#f5effc;border-radius:10px;padding:15px;text-align:center}
-.coming span{display:inline-block;background:#eadbff;color:#7138c8;border-radius:20px;padding:6px 11px;font-size:11px}
-.coming h4{margin:12px 0 5px}
-.activity{text-align:center;background:#faf7fd;padding:20px;border-radius:13px;color:#947eac;font-size:13px}
-.referral{background:#f2e8ff;border-radius:16px;padding:18px}
-.referral h3{margin-bottom:6px}
-.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:white;display:flex;justify-content:center;box-shadow:0 -4px 20px #32106412;z-index:5}
-.nav-inner{width:100%;max-width:480px;display:flex;justify-content:space-around;padding:10px 4px 13px}
-.nav-item{border:0;background:none;color:#947eac;font-size:11px;display:flex;flex-direction:column;align-items:center;gap:4px}
-.nav-item span{font-size:20px}
-.nav-item.active{color:#7138c8;font-weight:bold}
-.action{width:100%;padding:14px;border:0;border-radius:11px;background:#7138c8;color:white;font-size:15px;font-weight:bold;margin-top:8px}
-input,textarea,select{width:100%;padding:14px;border:1px solid #e6d9f2;border-radius:11px;margin:8px 0;font-size:15px;font-family:Arial,sans-serif}
-textarea{min-height:90px;resize:vertical}
-#status{text-align:center;color:#c0392b;font-size:13px;overflow-wrap:anywhere;margin:12px 0}
-#status.ok{color:#25834d}
-.auth-card{max-width:450px;margin:65px auto;background:white;padding:28px;border-radius:22px;text-align:center;box-shadow:0 8px 30px #32106412}
-.auth-card h1{font-size:32px}
-.auth-card h1 span{color:#a45be8}
-.link-btn{background:none;border:0;color:#947eac;padding:12px}
-button{cursor:pointer}
-button:disabled{opacity:.5;cursor:not-allowed}
-.modal-overlay{position:fixed;inset:0;background:rgba(30,12,50,.55);display:flex;align-items:center;justify-content:center;padding:18px;z-index:20}
-.modal{width:100%;max-width:400px;max-height:90vh;overflow-y:auto;background:white;border-radius:22px;padding:23px;box-shadow:0 10px 35px #0003}
-.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
-.modal-header h3{font-size:20px;margin:0}
-.close-btn{border:0;background:#f3eafa;color:#7138c8;width:36px;height:36px;border-radius:10px;font-size:20px}
-.modal-note{background:#f5effc;border-radius:12px;padding:12px;font-size:12px;color:#80669d;line-height:1.5;margin:10px 0}
-.admin-head{background:linear-gradient(135deg,#7138c8,#a45be8);color:white;border-radius:20px;padding:22px;margin-bottom:16px}
-.admin-head h2{margin-bottom:5px}
-.admin-item{background:white;border:1px solid #f0e7fa;border-radius:15px;padding:17px;margin-bottom:12px}
-.admin-item h3{margin-bottom:5px}
-.admin-tag{display:inline-block;background:#f1e8fc;color:#7138c8;padding:5px 9px;border-radius:20px;font-size:11px}
-.back-btn{border:0;background:#7138c8;color:white;padding:12px 17px;border-radius:11px;font-weight:bold;margin-bottom:16px}
-.task-row{border:1px solid #eee3f8;padding:13px;border-radius:12px;margin:10px 0;overflow-wrap:anywhere}
-.task-row h4{margin:0 0 6px}
-.task-row p{font-size:12px;color:#947eac;margin:5px 0}
-.task-status{display:inline-block;font-size:11px;color:#7138c8;background:#f1e8fc;padding:5px 9px;border-radius:15px}
-.task-status.paid{color:#1f7a45;background:#e0f6e8}
-.task-status.rejected{color:#bd3434;background:#ffe9e9}
-.task-link{display:inline-block;margin-top:10px;color:#7138c8;font-weight:bold;font-size:13px;text-decoration:none}
-.task-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:12px}
-.small-btn{border:0;border-radius:9px;padding:10px 6px;font-weight:bold;background:#eee3f8;color:#7138c8;font-size:12px}
-.small-btn.delete{background:#ffe9e9;color:#bd3434}
-.small-btn.pause{background:#fff2d9;color:#9b6810}
-.small-btn.approve{background:#e0f6e8;color:#1f7a45}
-.file-label{display:block;text-align:left;font-size:13px;font-weight:bold;margin:12px 0 2px}
-.proof-img{width:100%;border-radius:10px;margin-top:8px;border:1px solid #eee3f8}
-.wd-row{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;border:1px solid #eee3f8;border-radius:12px;padding:13px;margin:10px 0}
-.wd-row b{font-size:17px}
-.wd-row p{margin:4px 0 0;font-size:12px;color:#947eac;overflow-wrap:anywhere}
-.wd-right{text-align:right}
-.history-btn{border:0;background:#f1e8fc;color:#7138c8;padding:9px 12px;border-radius:10px;font-weight:bold;font-size:12px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.pill{display:inline-block;background:#eee5ff;color:#6d28d9;padding:5px 9px;border-radius:20px;font-size:11px}
+.status{font-size:12px;font-weight:bold}
+.status.pending{color:#b45309}
+.status.approved{color:#15803d}
+.status.rejected{color:#dc2626}
+hr{border:0;border-top:1px solid #eee;margin:14px 0}
+.modal{position:fixed;inset:0;background:#0008;display:flex;align-items:center;justify-content:center;padding:15px;z-index:20}
+.modalbox{background:white;border-radius:18px;padding:20px;width:100%;max-width:450px;max-height:90vh;overflow:auto}
+.menu{position:absolute;right:15px;top:60px;background:white;color:#321064;padding:12px;border-radius:12px;box-shadow:0 5px 20px #0002;min-width:180px}
+.menu button{display:block;width:100%;text-align:left;padding:10px;background:white;color:#321064}
+.task{border:1px solid #eee5ff}
+.task h3{margin:5px 0}
+.center{text-align:center;padding:35px 10px}
 </style>
 </head>
 <body>
-<div class="app">
- <div id="content">Loading...</div>
- <p id="status"></p>
+
+<header>
+  <h2>💜 HYY EARN</h2>
+  <button onclick="toggleMenu()" style="background:transparent;color:white;font-size:23px">☰</button>
+  <div id="profileMenu" class="menu hidden">
+    <div id="menuUsername" style="padding:8px;font-weight:bold"></div>
+    <button onclick="openPage('profile')">My Profile</button>
+    <button id="adminMenuBtn" class="hidden" onclick="adminLogin()">Admin Dashboard</button>
+    <button onclick="logout()">Logout</button>
+  </div>
+</header>
+
+<div class="wrap">
+  <section id="app"></section>
 </div>
 
-<script>
-const SUPABASE_URL="https://hofrfwjldbrfveufuvxu.supabase.co";
-const SUPABASE_ANON_KEY="sb_publishable_cdAswmtul4dLtyXvfIrWgQ_i42neFMJ";
+<nav id="bottomNav" class="nav hidden">
+  <button data-page="home" onclick="openPage('home')"><span>🏠</span>Home</button>
+  <button data-page="task" onclick="openPage('task')"><span>📋</span>Task</button>
+  <button data-page="community" onclick="openPage('community')"><span>👥</span>Community</button>
+  <button data-page="wallet" onclick="openPage('wallet')"><span>💰</span>Wallet</button>
+  <button data-page="profile" onclick="openPage('profile')"><span>👤</span>Profile</button>
+</nav>
 
-const client=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{
- auth:{flowType:"pkce",persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}
+<div id="modalRoot"></div>
+
+<script>
+const SUPABASE_URL = "https://hofrfwjldbrfveufuvxu.supabase.co";
+const SUPABASE_KEY = "sb_publishable_cdAswmtul4dLtyXvfIrWgQ_i42neFMJ";
+
+const db = window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{
+  auth:{
+    flowType:"pkce",
+    persistSession:true,
+    autoRefreshToken:true,
+    detectSessionInUrl:false
+  }
 });
 
-const content=document.getElementById("content");
-const status=document.getElementById("status");
 let currentUser=null;
-let currentUsername="";
+let username="";
+let walletBalance=0;
+let isAdmin=false;
 let adminVerified=false;
+let currentPage="home";
+let cachedTasks=[];
+let cachedSubmissions=[];
+let cachedWithdrawals=[];
 
-function showStatus(message,ok){
- status.textContent=message||"";
- status.className=ok?"ok":"";
-}
-function rupees(paise){return "₹"+((paise||0)/100).toFixed(2)}
-function escapeHTML(value){
- return String(value??"").replace(/[&<>"']/g,char=>({
- "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
- }[char]));
-}
-function safeHref(value){
- try{
-  const u=new URL(value);
-  return ["https:","http:"].includes(u.protocol)?u.href:"";
- }catch{return ""}
-}
+const app=document.getElementById("app");
+const modalRoot=document.getElementById("modalRoot");
 
-function showLogin(){
- currentUser=null;currentUsername="";adminVerified=false;
- content.innerHTML=`
- <div class="auth-card">
-  <div class="logo" style="margin:auto">✦</div>
-  <h1>HYY <span>EARN</span></h1>
-  <p class="muted">Complete · Earn · Redeem</p>
-  <h3>Welcome to HYY EARN</h3>
-  <p class="muted">Login with your Google account to continue.</p>
-  <button class="action" id="login">Continue with Google</button>
- </div>`;
- document.getElementById("login").onclick=async()=>{
-  showStatus("Connecting...");
-  const {error}=await client.auth.signInWithOAuth({
-   provider:"google",options:{redirectTo:window.location.origin}
+function money(paise){
+  return "₹"+(Number(paise||0)/100).toFixed(2);
+}
+function safe(value){
+  return String(value??"").replace(/[&<>"']/g,c=>({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
+  }[c]));
+}
+function showMessage(message){
+  alert(message);
+}
+function toggleMenu(){
+  document.getElementById("profileMenu").classList.toggle("hidden");
+}
+function closeMenu(){
+  document.getElementById("profileMenu").classList.add("hidden");
+}
+function setPage(html){
+  app.innerHTML=html;
+}
+function updateNav(){
+  document.querySelectorAll(".nav button").forEach(b=>{
+    b.classList.toggle("active",b.dataset.page===currentPage);
   });
-  if(error)showStatus(error.message);
- };
 }
-
-function showUsername(user){
- content.innerHTML=`
- <div class="auth-card">
-  <h1>HYY <span>EARN</span></h1>
-  <h3>Create your username</h3>
-  <p class="muted">Choose a unique username.</p>
-  <input id="username" maxlength="20" placeholder="Enter username">
-  <button class="action" id="save">Save Username</button>
- </div>`;
- document.getElementById("save").onclick=async()=>{
-  const username=document.getElementById("username").value.trim();
-  if(!/^[a-zA-Z0-9_-]{3,20}$/.test(username)){
-   showStatus("Use 3-20 letters, numbers, _ or -");return;
+async function getWallet(){
+  const {data,error}=await db.from("wallet")
+    .select("balance_paise")
+    .eq("user_id",currentUser.id)
+    .maybeSingle();
+  if(error) console.error(error);
+  walletBalance=data?.balance_paise||0;
+}
+async function getUsername(){
+  const {data,error}=await db.from("profilea")
+    .select("username")
+    .eq("id",currentUser.id)
+    .maybeSingle();
+  if(error) console.error(error);
+  username=data?.username||"User";
+  document.getElementById("menuUsername").textContent=username;
+}
+async function checkAdmin(){
+  const {data,error}=await db.rpc("is_admin");
+  isAdmin=!error && (data===true || data?.is_admin===true);
+  document.getElementById("adminMenuBtn").classList.toggle("hidden",!isAdmin);
+}
+async function refreshAccount(){
+  await Promise.all([getWallet(),getUsername(),checkAdmin()]);
+}
+async function startApp(){
+  const {data:{session}}=await db.auth.getSession();
+  if(!session){
+    showLogin();
+    return;
   }
-  const btn=document.getElementById("save");
-  btn.disabled=true;showStatus("Saving...");
-  const {error}=await client.from("profilea").insert({id:user.id,username});
+  currentUser=session.user;
+  await refreshAccount();
+  document.getElementById("bottomNav").classList.remove("hidden");
+  openPage("home");
+}
+function showLogin(){
+  document.getElementById("bottomNav").classList.add("hidden");
+  document.getElementById("profileMenu").classList.add("hidden");
+  setPage(`
+    <div class="card center">
+      <h1>💜 HYY EARN</h1>
+      <p>Welcome! Login to continue.</p>
+      <button class="btn" onclick="googleLogin()">Continue with Google</button>
+      <p class="muted">Demo rewards platform</p>
+    </div>
+  `);
+}
+async function googleLogin(){
+  const {error}=await db.auth.signInWithOAuth({
+    provider:"google",
+    options:{redirectTo:window.location.origin}
+  });
+  if(error) showMessage(error.message);
+}
+async function logout(){
+  closeMenu();
+  await db.auth.signOut();
+  currentUser=null;
+  showLogin();
+}
+async function openPage(page){
+  if(!currentUser){showLogin();return;}
+  currentPage=page;
+  updateNav();
+  closeMenu();
+  document.getElementById("bottomNav").classList.remove("hidden");
+
+  if(page==="home") return renderHome();
+  if(page==="task") return renderTasks();
+  if(page==="community") return renderCommunity();
+  if(page==="wallet") return renderWallet();
+  if(page==="profile") return renderProfile();
+}
+async function renderHome(){
+  await getWallet();
+  setPage(`
+    <div class="card hero">
+      <p>Welcome back 👋</p>
+      <h2>${safe(username)}</h2>
+      <p>Your wallet balance</p>
+      <div class="big">${money(walletBalance)}</div>
+      <button class="btn light" onclick="openPage('wallet')">View Wallet</button>
+    </div>
+
+    <div class="card">
+      <div class="row"><h3>Daily Check-in 🎁</h3><span class="pill">Daily</span></div>
+      <p class="muted">Check in and see whether today's reward is available.</p>
+      <button class="btn" onclick="dailyCheckin()">Daily Check-in</button>
+    </div>
+
+    <h3>Earn More</h3>
+    <div class="grid">
+      <div class="tile" onclick="openPage('task')">📋<br>Tasks</div>
+      <div class="tile" onclick="comingSoon()">📝<br>Surveys</div>
+      <div class="tile" onclick="comingSoon()">🎮<br>Games</div>
+      <div class="tile" onclick="comingSoon()">🎁<br>Rewards</div>
+    </div>
+
+    <div class="card">
+      <h3>Available Tasks</h3>
+      <p class="muted">Explore tasks and submit proof after completing them.</p>
+      <button class="btn" onclick="openPage('task')">View Tasks</button>
+    </div>
+
+    <div class="card">
+      <h3>Refer & Earn</h3>
+      <p class="muted">Referral feature coming soon.</p>
+    </div>
+  `);
+}
+async function dailyCheckin(){
+  const {data,error}=await db.rpc("daily_checkin");
+  if(error){showMessage(error.message);return;}
+  showMessage(typeof data==="string"?data:"Check-in response received!");
+  await getWallet();
+  renderHome();
+}
+function comingSoon(){
+  showMessage("Coming Soon!");
+}
+async function renderTasks(){
+  setPage(`<h2>Available Tasks 📋</h2><p class="muted">Loading tasks...</p>`);
+  const {data,error}=await db.from("tasks")
+    .select("*")
+    .eq("status","active")
+    .order("created_at",{ascending:false});
   if(error){
-   btn.disabled=false;
-   showStatus(error.code==="23505"?"Username already taken":error.message);return;
+    setPage(`<div class="card">Unable to load tasks: ${safe(error.message)}</div>`);
+    return;
   }
-  showStatus("");showDashboard(username,user);
- };
+  cachedTasks=data||[];
+  let html=`<h2>Available Tasks 📋</h2>
+    <p class="muted">Choose a task to view its details.</p>`;
+  if(!cachedTasks.length){
+    html+=`<div class="card center">No active tasks right now.</div>`;
+  }
+  for(const task of cachedTasks){
+    html+=`
+      <div class="card task">
+        <div class="row"><span class="pill">${safe(task.category||"Task")}</span>
+        <b>${money(task.reward_paise)}</b></div>
+        <h3>${safe(task.title)}</h3>
+        <p class="muted">${safe(task.description||"")}</p>
+        <button class="btn" onclick="openTask('${safe(task.id)}')">View Task</button>
+      </div>`;
+  }
+  setPage(html);
 }
+async function openTask(taskId){
+  const task=cachedTasks.find(t=>String(t.id)===String(taskId));
+  if(!task)return;
+  const {data:submission}=await db.from("task_submissions")
+    .select("status")
+    .eq("task_id",taskId)
+    .eq("user_id",currentUser.id)
+    .maybeSingle();
 
-async function getBalance(user){
- const {data,error}=await client.from("wallet").select("balance_paise").eq("user_id",user.id).maybeSingle();
- if(error){showStatus("Wallet: "+error.message);return 0}
- return data?data.balance_paise:0;
+  let statusHtml=submission
+    ?`<p class="status ${safe(submission.status)}">Your submission: ${safe(submission.status)}</p>`
+    :`<button class="btn" onclick="openProof('${safe(task.id)}')">Submit Proof</button>`;
+
+  setPage(`
+    <button class="btn light" onclick="renderTasks()">← Back to Tasks</button>
+    <div class="card">
+      <span class="pill">${safe(task.category||"Task")}</span>
+      <h2>${safe(task.title)}</h2>
+      <h3>${money(task.reward_paise)} reward</h3>
+      <p>${safe(task.description||"No description available.")}</p>
+      ${task.task_url?`<p><a href="${safe(task.task_url)}" target="_blank" rel="noopener">Open Task Link ↗</a></p>`:""}
+      <hr>
+      ${statusHtml}
+    </div>
+  `);
 }
-
-/* Withdrawal History */
-async function renderWithdrawalHistoryPage(){
- if(!currentUser)return;
-
- content.innerHTML=`
- <header class="header">
-  <div class="brand">
-   <div class="logo">✦</div>
-   <div><h2>HYY EARN</h2><p>Withdrawal History</p></div>
-  </div>
- </header>
- <button class="back-btn" id="backToWithdraw">← Back to Withdrawal</button>
- <section class="admin-head">
-  <h2>Withdrawal History</h2>
-  <p style="margin:0;opacity:.85;font-size:13px">Track all your withdrawal requests.</p>
- </section>
- <section class="card">
-  <div id="wdHistory" class="muted">Loading history...</div>
- </section>`;
-
- document.getElementById("backToWithdraw").onclick=()=>{
-  showDashboard(currentUsername,currentUser);
-  setTimeout(openWithdrawModal,100);
- };
-
- const box=document.getElementById("wdHistory");
- const {data,error}=await client.from("withdrawals")
-  .select("id,full_name,amount_paise,upi_id,status,created_at,reviewed_at")
-  .eq("user_id",currentUser.id)
-  .order("created_at",{ascending:false})
-  .limit(50);
-
- if(error){box.textContent="Unable to load withdrawal history: "+error.message;return}
- if(!data||!data.length){
-  box.innerHTML=`<div class="activity">No withdrawals yet.</div>`;
-  return;
- }
-
- const info={
-  pending:{cls:"",label:"⏳ Pending",note:"Your request is under review."},
-  paid:{cls:"paid",label:"✅ Success",note:"Payment has been marked as sent."},
-  rejected:{cls:"rejected",label:"❌ Rejected",note:"The amount has been returned to your wallet."}
- };
-
- box.innerHTML=data.map(w=>{
-  const i=info[w.status]||{cls:"",label:escapeHTML(w.status),note:""};
-  const when=new Date(w.reviewed_at||w.created_at).toLocaleString();
-  return `<div class="wd-row">
-   <div>
-    <b>${rupees(w.amount_paise)}</b>
-    <p>Full Name: ${escapeHTML(w.full_name||"Not available")}</p>
-    <p>UPI: ${escapeHTML(w.upi_id)}</p>
-    <p>${i.note}</p>
-   </div>
-   <div class="wd-right">
-    <span class="task-status ${i.cls}">${i.label}</span>
-    <p>${escapeHTML(when)}</p>
-   </div>
-  </div>`;
- }).join("");
+function openProof(taskId){
+  modalRoot.innerHTML=`
+    <div class="modal">
+      <div class="modalbox">
+        <h3>Submit Task Proof</h3>
+        <label>Proof description</label>
+        <textarea id="proofText" placeholder="Describe what you completed"></textarea>
+        <label>Proof link (optional)</label>
+        <input id="proofUrl" placeholder="https://...">
+        <label>Screenshot (optional, JPG/PNG/WebP, max 5 MB)</label>
+        <input id="proofFile" type="file" accept="image/jpeg,image/png,image/webp">
+        <button class="btn" onclick="submitProof('${safe(taskId)}')">Submit Proof</button>
+        <button class="btn light" onclick="closeModal()">Cancel</button>
+      </div>
+    </div>`;
 }
-
-const IMAGE_TYPES={"image/jpeg":"jpg","image/png":"png","image/webp":"webp"};
-
-function openSubmitModal(task){
- const old=document.getElementById("submitModal");
- if(old)old.remove();
- const box=document.createElement("div");
- box.className="modal-overlay";
- box.id="submitModal";
- box.innerHTML=`
-  <div class="modal">
-   <div class="modal-header"><h3>Submit Proof</h3><button class="close-btn" id="closeSubmit">×</button></div>
-   <p class="muted" id="submitTitle"></p>
-   <label class="file-label" for="proofFile">📸 Screenshot upload</label>
-   <input id="proofFile" type="file" accept="image/jpeg,image/png,image/webp">
-   <p class="muted" id="fileInfo">JPG, PNG or WebP. Max 5 MB.</p>
-   <textarea id="proofText" maxlength="1000" placeholder="Describe what you completed (optional details)"></textarea>
-   <input id="proofUrl" type="url" maxlength="500" placeholder="Proof link (optional)">
-   <div class="modal-note">The admin will review your submission. You can submit each task only once. Never share passwords or OTPs.</div>
-   <button class="action" id="sendProof">Submit</button>
-  </div>`;
- document.body.appendChild(box);
- document.getElementById("submitTitle").textContent=task.title;
- document.getElementById("closeSubmit").onclick=()=>box.remove();
- box.onclick=e=>{if(e.target===box)box.remove()};
-
- document.getElementById("proofFile").onchange=e=>{
-  const f=e.target.files[0];
-  const info=document.getElementById("fileInfo");
-  if(!f){info.textContent="JPG, PNG or WebP. Max 5 MB.";return}
-  info.textContent="Selected: "+f.name+" ("+(f.size/1024/1024).toFixed(2)+" MB)";
- };
-
- document.getElementById("sendProof").onclick=async()=>{
+function closeModal(){modalRoot.innerHTML="";}
+async function submitProof(taskId){
   const proofText=document.getElementById("proofText").value.trim();
   const proofUrl=document.getElementById("proofUrl").value.trim();
   const file=document.getElementById("proofFile").files[0];
-
-  if(file){
-   if(!IMAGE_TYPES[file.type]){showStatus("Only JPG, PNG or WebP images are allowed.");return}
-   if(file.size>5*1024*1024){showStatus("Image must be smaller than 5 MB.");return}
-  }
-  if(!file&&proofText.length<3&&proofUrl.length<5){
-   showStatus("Please provide a screenshot, text or link.");return;
-  }
-  if(proofUrl&&!safeHref(proofUrl)){showStatus("Please enter a valid link.");return}
-
-  const btn=document.getElementById("sendProof");
-  btn.disabled=true;
-  let path=null;
-
-  if(file){
-   showStatus("Uploading screenshot...");
-   path=currentUser.id+"/"+crypto.randomUUID()+"."+IMAGE_TYPES[file.type];
-   const {error:upErr}=await client.storage.from("proofs").upload(path,file,{
-    contentType:file.type,upsert:false
-   });
-   if(upErr){
-    btn.disabled=false;
-    showStatus("Upload failed: "+upErr.message);
+  if(!proofText&&!proofUrl&&!file){
+    showMessage("Please add proof text, a link, or a screenshot.");
     return;
-   }
   }
-
-  showStatus("Submitting...");
-  const {error}=await client.rpc("submit_task",{
-   p_task_id:String(task.id),
-   p_proof_text:proofText||null,
-   p_proof_url:proofUrl||null,
-   p_proof_path:path
+  let proofPath=null;
+  if(file){
+    if(file.size>5*1024*1024){showMessage("File must be under 5 MB.");return;}
+    if(!["image/jpeg","image/png","image/webp"].includes(file.type)){
+      showMessage("Only JPG, PNG, or WebP images are allowed.");return;
+    }
+    const ext=file.type==="image/png"?"png":file.type==="image/webp"?"webp":"jpg";
+    proofPath=`${currentUser.id}/${crypto.randomUUID()}.${ext}`;
+    const {error:uploadError}=await db.storage.from("proofs").upload(proofPath,file);
+    if(uploadError){showMessage(uploadError.message);return;}
+  }
+  const {error}=await db.rpc("submit_task",{
+    p_task_id:taskId,
+    p_proof_text:proofText||null,
+    p_proof_url:proofUrl||null,
+    p_proof_path:proofPath
   });
-  btn.disabled=false;
-  if(error){
-   showStatus(error.message.includes("Already")?"You have already submitted this task.":error.message);
-   return;
-  }
-  box.remove();
-  showStatus("Proof submitted! The admin will review it.",true);
-  loadPublishedTasks();
- };
+  if(error){showMessage(error.message);return;}
+  closeModal();
+  showMessage("Proof submitted for review!");
+  openTask(taskId);
 }
-
-async function loadPublishedTasks(){
- const list=document.getElementById("availableTasks");
- if(!list)return;
- list.textContent="Loading available tasks...";
- const [tasksRes,subsRes]=await Promise.all([
-  client.from("tasks").select("id,title,description,category,reward_paise,task_url")
-   .eq("status","published").order("created_at",{ascending:false}),
-  client.from("task_submissions").select("task_id,status").eq("user_id",currentUser.id)
- ]);
- const tasks=tasksRes.data;
- if(tasksRes.error){list.textContent="Unable to load tasks. Please try again.";return}
- if(!tasks||!tasks.length){
-  list.innerHTML=`<div class="coming"><span>No active tasks</span><h4>New tasks coming soon!</h4><p class="muted">Please check again later.</p></div>`;return;
- }
- const subs={};
- (subsRes.data||[]).forEach(s=>{subs[String(s.task_id)]=s.status});
- const labels={pending:"⏳ Pending review",approved:"✅ Approved",rejected:"❌ Rejected"};
- list.innerHTML=tasks.map(task=>{
-  const href=safeHref(task.task_url);
-  const link=href?`<a class="task-link" href="${escapeHTML(href)}" target="_blank" rel="noopener noreferrer">Open Task →</a>`:"";
-  const st=subs[String(task.id)];
-  const action=st?`<span class="task-status">${labels[st]||escapeHTML(st)}</span>`:
-   `<button class="small-btn" data-submit="${escapeHTML(task.id)}">Submit Proof</button>`;
-  return `<div class="task-row">
-   <h4>${escapeHTML(task.title)}</h4>
-   <p>${escapeHTML(task.description||"No description")}</p>
-   <p>Category: ${escapeHTML(task.category)}</p>
-   <p>Listed reward: ${rupees(task.reward_paise)}</p>${link}
-   <div style="margin-top:10px">${action}</div>
-  </div>`;
- }).join("");
- list.querySelectorAll("[data-submit]").forEach(btn=>{
-  btn.onclick=()=>openSubmitModal(tasks.find(t=>String(t.id)===btn.dataset.submit));
- });
-}
-
-function openWithdrawModal(){document.getElementById("withdrawModal")?.classList.remove("hidden");showStatus("")}
-function closeWithdrawModal(){document.getElementById("withdrawModal")?.classList.add("hidden")}
-function openAdminPassword(){document.getElementById("adminPasswordModal")?.classList.remove("hidden");showStatus("")}
-function closeAdminPassword(){document.getElementById("adminPasswordModal")?.classList.add("hidden")}
-
-async function checkAdminPermission(){
- const {data,error}=await client.rpc("is_admin");
- if(error){console.error("Admin check:",error.message);return false}
- return data===true;
-}
-
-async function showDashboard(username,user){
- currentUser=user;currentUsername=username;adminVerified=false;
- content.innerHTML=`
- <header class="header">
-  <div class="brand"><div class="logo">✦</div><div><h2>HYY EARN</h2><p>Complete · Earn · Redeem</p></div></div>
-  <div class="header-actions">
-   <button class="icon-btn" id="notifications">♧</button>
-   <div class="profile-wrap">
-    <button class="icon-btn" id="profileBtn">👤</button>
-    <div class="profile-menu hidden" id="profileMenu">
-     <p id="menuUsername"></p>
-     <button id="adminOption" class="hidden">Admin Dashboard</button>
-     <button id="menuLogout" class="logout-btn">Logout</button>
+function renderCommunity(){
+  setPage(`
+    <div class="card center">
+      <div style="font-size:45px">👥</div>
+      <h2>Community</h2>
+      <p class="muted">Community features are coming soon.</p>
     </div>
-   </div>
-  </div>
- </header>
- <p class="greeting">Welcome back,</p><h2 id="welcome"></h2>
- <section class="wallet">
-  <div class="wallet-top"><span class="wallet-label">Your Wallet Balance</span><span class="wallet-icon">◈</span></div>
-  <div class="amount" id="bal">...</div>
-  <div class="wallet-bottom"><small>Available balance</small><button class="primary-btn" id="goWithdraw">Withdraw</button></div>
- </section>
- <section class="card">
-  <div class="section-title"><h3>Daily Check-in</h3><span>🎁</span></div>
-  <div class="checkin">
-   <div class="check-icon">📅</div>
-   <div class="check-text"><h3>Daily Reward</h3><p>Check in every day</p></div>
-   <button class="check-btn" id="checkin">Check In</button>
-  </div>
-  <p id="checkinMessage" class="checkin-message"></p>
- </section>
- <section class="card"><div class="section-title"><h3>Earn More</h3></div>
-  <div class="grid">
-   <div class="tile"><div class="tile-icon">📋</div><h4>Surveys</h4><p>Coming soon</p></div>
-   <div class="tile"><div class="tile-icon">🎯</div><h4>Tasks</h4><p>See Available Tasks below</p></div>
-   <div class="tile"><div class="tile-icon">🎮</div><h4>Games</h4><p>Coming soon</p></div>
-   <div class="tile"><div class="tile-icon">🎁</div><h4>Rewards</h4><p>Coming soon</p></div>
-  </div>
- </section>
- <section class="card"><h3>Available Tasks</h3><div id="availableTasks" class="muted">Loading available tasks...</div></section>
- <section class="card"><div class="referral"><h3>Refer & Earn 🎉</h3><p class="muted">Referral rewards are coming soon.</p></div></section>
- <section class="card"><h3>Recent Activity</h3><div class="activity">No activity yet</div></section>
-
- <div class="modal-overlay hidden" id="withdrawModal"><div class="modal">
-  <div class="modal-header">
-   <h3>Withdraw</h3>
-   <div style="display:flex;gap:8px;align-items:center">
-    <button class="history-btn" id="openWdHistory">History ↗</button>
-    <button class="close-btn" id="closeWithdraw">×</button>
-   </div>
-  </div>
-  <p class="muted">Enter your full name, withdrawal amount and UPI ID.</p>
-  <div class="modal-note">Minimum withdrawal ₹100. This sends a request only; it does not transfer money automatically.</div>
-  <input id="wfullname" type="text" maxlength="100" autocomplete="name" placeholder="Full Name">
-  <input id="wamount" type="number" min="100" step="0.01" placeholder="Amount (₹)">
-  <input id="wupi" type="text" maxlength="100" placeholder="UPI ID (name@bank)">
-  <button class="action" id="withdrawSubmit">Send Request</button>
- </div></div>
-
- <div class="modal-overlay hidden" id="adminPasswordModal"><div class="modal">
-  <div class="modal-header"><h3>Admin Verification</h3><button class="close-btn" id="closeAdmin">×</button></div>
-  <p class="muted">Enter your admin password to continue.</p>
-  <input id="adminPassword" type="password" placeholder="Admin password" autocomplete="current-password">
-  <button class="action" id="adminLoginSubmit">Verify & Continue</button><p id="adminError" class="muted"></p>
- </div></div>
-
- <nav class="bottom-nav"><div class="nav-inner">
-  <button class="nav-item active" data-tab="home"><span>⌂</span>Home</button>
-  <button class="nav-item" data-tab="offers"><span>▣</span>Offers</button>
-  <button class="nav-item" data-tab="refer"><span>♧</span>Refer</button>
-  <button class="nav-item" data-tab="profile"><span>◉</span>Profile</button>
- </div></nav>`;
-
- document.getElementById("welcome").textContent=username+"!";
- document.getElementById("menuUsername").textContent="Username: "+username;
- document.getElementById("bal").textContent=rupees(await getBalance(user));
- loadPublishedTasks();
-
- if(await checkAdminPermission())document.getElementById("adminOption").classList.remove("hidden");
-
- document.getElementById("profileBtn").onclick=()=>document.getElementById("profileMenu").classList.toggle("hidden");
- document.getElementById("adminOption").onclick=()=>{
-  document.getElementById("profileMenu").classList.add("hidden");openAdminPassword();
- };
- document.getElementById("closeAdmin").onclick=closeAdminPassword;
- document.getElementById("adminPasswordModal").onclick=e=>{if(e.target.id==="adminPasswordModal")closeAdminPassword()};
-
- document.getElementById("adminLoginSubmit").onclick=async()=>{
-  const password=document.getElementById("adminPassword").value;
-  const btn=document.getElementById("adminLoginSubmit");
-  const errorBox=document.getElementById("adminError");
-  if(!password){errorBox.textContent="Enter your password.";return}
-  btn.disabled=true;btn.textContent="Verifying...";errorBox.textContent="";
-  try{
-   const {data,error}=await client.functions.invoke("smart-function",{body:{password}});
-   if(error||!data?.success){errorBox.textContent=data?.error||error?.message||"Admin verification failed.";return}
-   adminVerified=true;closeAdminPassword();
-   document.getElementById("adminPassword").value="";
-   showAdminDashboard();
-  }catch(err){errorBox.textContent="Unable to verify. Please try again."}
-  finally{btn.disabled=false;btn.textContent="Verify & Continue"}
- };
-
- document.getElementById("menuLogout").onclick=async()=>{
-  showStatus("Logging out...");adminVerified=false;
-  const {error}=await client.auth.signOut();
-  if(error){showStatus(error.message);return}
-  showLogin();showStatus("");
- };
-
- document.getElementById("notifications").onclick=()=>{
-  showStatus("Refreshing...");
-  loadPublishedTasks().then(()=>showStatus("Updated.",true));
- };
-
- document.getElementById("goWithdraw").onclick=openWithdrawModal;
- document.getElementById("closeWithdraw").onclick=closeWithdrawModal;
- document.getElementById("openWdHistory").onclick=()=>{
-  closeWithdrawModal();
-  renderWithdrawalHistoryPage();
- };
- document.getElementById("withdrawModal").onclick=e=>{if(e.target.id==="withdrawModal")closeWithdrawModal()};
-
- document.getElementById("checkin").onclick=async()=>{
-  const btn=document.getElementById("checkin");
-  const msg=document.getElementById("checkinMessage");
-  btn.disabled=true;
-  msg.textContent="Checking in...";
-  msg.style.color="#947eac";
-
-  const {data,error}=await client.rpc("daily_checkin");
-  btn.disabled=false;
-
-  if(error){
-   msg.textContent=error.message.includes("Already")
-    ?"You've already checked in today. Come back tomorrow!"
-    :error.message;
-   msg.style.color="#c0392b";
-   return;
-  }
-
-  document.getElementById("bal").textContent=rupees(data);
-  msg.textContent="Check-in successful! Your reward has been added.";
-  msg.style.color="#25834d";
- };
-
- document.getElementById("withdrawSubmit").onclick=async()=>{
-  const fullName=document.getElementById("wfullname").value.trim();
-  const amount=Math.round(Number(document.getElementById("wamount").value)*100);
-  const upi=document.getElementById("wupi").value.trim();
-
-  if(fullName.length<2||fullName.length>100){
-   showStatus("Please enter your full name.");return;
-  }
-  if(!amount||amount<10000){
-   showStatus("Minimum withdrawal ₹100");return;
-  }
-  if(!/^[\w.\-]{2,}@[\w]{2,}$/.test(upi)){
-   showStatus("Please enter a valid UPI ID (name@bank).");return;
-  }
-
-  const btn=document.getElementById("withdrawSubmit");
-  btn.disabled=true;showStatus("Sending...");
-
-  const {error}=await client.rpc("request_withdrawal",{
-   p_amount:amount,
-   p_upi:upi,
-   p_full_name:fullName
-  });
-
-  btn.disabled=false;
-  if(error){showStatus(error.message);return}
-
-  closeWithdrawModal();
-  document.getElementById("wfullname").value="";
-  document.getElementById("wamount").value="";
-  document.getElementById("wupi").value="";
-  document.getElementById("bal").textContent=rupees(await getBalance(currentUser));
-  showStatus("Withdrawal request submitted successfully!",true);
- };
-
- document.querySelectorAll(".nav-item").forEach(btn=>{
-  btn.onclick=()=>{
-   document.querySelectorAll(".nav-item").forEach(item=>item.classList.remove("active"));
-   btn.classList.add("active");
-   const tab=btn.dataset.tab;
-   if(tab==="home")window.scrollTo({top:0,behavior:"smooth"});
-   else if(tab==="offers"){document.querySelector(".card").scrollIntoView({behavior:"smooth"});showStatus("Offers are coming soon.")}
-   else if(tab==="refer"){document.querySelector(".referral").scrollIntoView({behavior:"smooth"});showStatus("Referral feature is coming soon.")}
-   else if(tab==="profile"){document.getElementById("profileBtn").click();window.scrollTo({top:0,behavior:"smooth"})}
-  };
- });
+  `);
 }
-
+async function renderWallet(){
+  await getWallet();
+  setPage(`
+    <div class="card hero">
+      <p>My Wallet 💰</p>
+      <div class="big">${money(walletBalance)}</div>
+      <p>Available balance</p>
+    </div>
+    <div class="card">
+      <h3>Withdraw Request</h3>
+      <p class="muted">Minimum request amount ₹100. Requests are reviewed manually.</p>
+      <button class="btn" onclick="openWithdraw()">Request Withdrawal</button>
+    </div>
+    <div class="card">
+      <h3>Withdrawal History</h3>
+      <button class="btn light" onclick="renderWithdrawalHistory()">View History</button>
+    </div>
+  `);
+}
+function openWithdraw(){
+  modalRoot.innerHTML=`
+    <div class="modal"><div class="modalbox">
+      <h3>Withdrawal Request</h3>
+      <label>Full Name</label>
+      <input id="withdrawName" placeholder="Enter full name">
+      <label>UPI ID</label>
+      <input id="withdrawUpi" placeholder="example@upi">
+      <label>Amount (₹)</label>
+      <input id="withdrawAmount" type="number" min="100" placeholder="Minimum ₹100">
+      <button class="btn" onclick="sendWithdrawal()">Submit Request</button>
+      <button class="btn light" onclick="closeModal()">Cancel</button>
+    </div></div>`;
+}
+async function sendWithdrawal(){
+  const fullName=document.getElementById("withdrawName").value.trim();
+  const upi=document.getElementById("withdrawUpi").value.trim();
+  const amount=Number(document.getElementById("withdrawAmount").value);
+  if(!fullName||!upi||!Number.isFinite(amount)||amount<100){
+    showMessage("Enter valid details. Minimum amount is ₹100.");return;
+  }
+  if(!/^[\w.-]+@[\w.-]+$/.test(upi)){
+    showMessage("Please enter a valid UPI ID.");return;
+  }
+  const {error}=await db.rpc("request_withdrawal",{
+    p_amount:Math.round(amount*100),
+    p_full_name:fullName,
+    p_upi:upi
+  });
+  if(error){showMessage(error.message);return;}
+  closeModal();
+  showMessage("Withdrawal request submitted. It is not an automatic transfer.");
+  await renderWallet();
+}
+async function renderWithdrawalHistory(){
+  setPage(`<h2>Withdrawal History</h2><p>Loading...</p>`);
+  const {data,error}=await db.from("withdrawals")
+    .select("id,amount_paise,status,created_at")
+    .eq("user_id",currentUser.id)
+    .order("created_at",{ascending:false});
+  if(error){setPage(`<div class="card">${safe(error.message)}</div>`);return;}
+  let html=`<button class="btn light" onclick="openPage('wallet')">← Wallet</button><h2>Withdrawal History</h2>`;
+  if(!data?.length)html+=`<div class="card">No withdrawal requests yet.</div>`;
+  for(const w of data||[]){
+    html+=`<div class="card">
+      <div class="row"><b>${money(w.amount_paise)}</b>
+      <span class="status ${safe(w.status)}">${safe(w.status)}</span></div>
+      <p class="muted">${new Date(w.created_at).toLocaleString()}</p>
+    </div>`;
+  }
+  setPage(html);
+}
+function renderProfile(){
+  setPage(`
+    <div class="card center">
+      <div style="font-size:45px">👤</div>
+      <h2>${safe(username)}</h2>
+      <p class="muted">${safe(currentUser.email||"")}</p>
+    </div>
+    <div class="card">
+      <button class="btn light" onclick="openPage('wallet')">My Wallet</button>
+      ${isAdmin?`<button class="btn" onclick="adminLogin()">Admin Dashboard</button>`:""}
+      <button class="btn red" onclick="logout()">Logout</button>
+    </div>
+  `);
+}async function adminLogin(){
+  closeMenu();
+  if(!isAdmin){showMessage("Admin access only.");return;}
+  const password=prompt("Enter Admin Password");
+  if(password===null)return;
+  const {data,error}=await db.functions.invoke("smart-function",{
+    body:{password}
+  });
+  if(error){showMessage(error.message);return;}
+  if(!data || data.success!==true){
+    showMessage(data?.message||"Admin verification failed.");
+    return;
+  }
+  adminVerified=true;
+  showAdminDashboard();
+}
+function requireAdmin(){
+  if(!isAdmin||!adminVerified){
+    showMessage("Please verify admin access first.");
+    return false;
+  }
+  return true;
+}
+function adminShell(content){
+  document.getElementById("bottomNav").classList.add("hidden");
+  currentPage="admin";
+  setPage(`
+    <div class="card hero">
+      <h2>HYY EARN Administration</h2>
+      <p>Admin Dashboard</p>
+      <b>Welcome, ${safe(username)}</b>
+    </div>
+    <button class="btn light" onclick="adminBack()">← User Dashboard</button>
+    ${content}
+  `);
+}
+function adminBack(){
+  adminVerified=false;
+  openPage("home");
+}
 function showAdminDashboard(){
- if(!adminVerified||!currentUser){showDashboard(currentUsername,currentUser);return}
- content.innerHTML=`
- <header class="header"><div class="brand"><div class="logo">✦</div><div><h2>HYY EARN</h2><p>Administration</p></div></div><button class="icon-btn" id="adminProfile">👤</button></header>
- <button class="back-btn" id="backUser">← User Dashboard</button>
- <section class="admin-head"><h2>Admin Dashboard</h2><p style="margin:0;opacity:.85;font-size:13px">Welcome, ${escapeHTML(currentUsername)}</p></section>
- <section class="admin-item" id="createTasksCard" style="cursor:pointer"><h3>➕ Create Tasks</h3><p class="muted">Create and publish tasks for users.</p><button class="action">Open Create Tasks →</button></section>
- <section class="admin-item"><h3>📋 Your Tasks</h3><div id="adminTaskList" class="muted">Loading tasks...</div></section>
- <section class="admin-item" id="approvalsCard" style="cursor:pointer"><h3>✅ Task Approvals</h3><p class="muted">Review user proofs, approve or reject.</p><button class="action">Open Task Approvals →</button></section>
- <section class="admin-item" id="withdrawalsCard" style="cursor:pointer"><h3>💸 Withdrawals</h3><p class="muted">Review withdrawal requests, mark paid or reject.</p><button class="action">Open Withdrawals →</button></section>
- <section class="admin-item" id="manageUsersCard" style="cursor:pointer"><h3>👥 Manage Users</h3><p class="muted">View registered users and wallet balances.</p><button class="action">Open Manage Users →</button></section>
- <section class="admin-item"><h3>🔔 Notifications</h3><p class="muted">Notifications will be activated next.</p><span class="admin-tag">Coming next</span></section>`;
-
- document.getElementById("backUser").onclick=()=>{adminVerified=false;showDashboard(currentUsername,currentUser)};
- document.getElementById("adminProfile").onclick=()=>{adminVerified=false;showDashboard(currentUsername,currentUser)};
- document.getElementById("createTasksCard").onclick=renderCreateTaskPage;
- document.getElementById("approvalsCard").onclick=renderApprovalsPage;
- document.getElementById("withdrawalsCard").onclick=renderWithdrawalsPage;
- document.getElementById("manageUsersCard").onclick=renderManageUsersPage;
-
- /* MANAGE USERS */
- async function renderManageUsersPage(){
-  if(!adminVerified||!currentUser)return;
-
-  content.innerHTML=`
-   <header class="header">
-    <div class="brand">
-     <div class="logo">✦</div>
-     <div><h2>HYY EARN</h2><p>Manage Users</p></div>
+  if(!requireAdmin())return;
+  adminShell(`
+    <div class="card">
+      <h3>Admin Dashboard</h3>
+      <p class="muted">Manage your platform from here.</p>
+      <button class="btn" onclick="renderCreateTaskPage()">＋ Create Tasks</button>
+      <button class="btn light" onclick="renderAdminTasks()">Your Tasks</button>
+      <button class="btn light" onclick="renderApprovalsPage()">Task Approvals</button>
+      <button class="btn light" onclick="renderAdminWithdrawals()">Withdrawals</button>
+      <button class="btn light" onclick="renderManageUsersPage()">Manage Users</button>
+      <button class="btn light" onclick="showMessage('Notifications coming soon!')">Notifications</button>
     </div>
-   </header>
-
-   <button class="back-btn" id="backAdmin">← Admin Dashboard</button>
-
-   <section class="admin-head">
-    <h2>👥 Manage Users</h2>
-    <p style="margin:0;opacity:.85;font-size:13px">
-     Registered users and wallet balances.
-    </p>
-   </section>
-
-   <section class="admin-item">
-    <input id="userSearch" type="search" placeholder="Search username or user ID">
-    <button class="action" id="refreshUsers">↻ Refresh Users</button>
-    <p id="userCount" class="muted">Loading users...</p>
-    <div id="usersList" class="muted">Please wait...</div>
-   </section>`;
-
-  document.getElementById("backAdmin").onclick=showAdminDashboard;
-
-  const list=document.getElementById("usersList");
-  const search=document.getElementById("userSearch");
-  const count=document.getElementById("userCount");
-  const refresh=document.getElementById("refreshUsers");
-
-  let users=[];
-
-  function displayUsers(){
-   const term=search.value.trim().toLowerCase();
-
-   const filtered=users.filter(u=>
+  `);
+}
+function renderCreateTaskPage(){
+  if(!requireAdmin())return;
+  adminShell(`
+    <div class="card">
+      <h3>Create New Task</h3>
+      <label>Task Title</label>
+      <input id="newTaskTitle" placeholder="Enter task title">
+      <label>Task Description</label>
+      <textarea id="newTaskDescription" placeholder="Explain the task"></textarea>
+      <label>Category</label>
+      <select id="newTaskCategory">
+        <option>Survey</option><option>Social Media</option>
+        <option>Website</option><option>Other</option>
+      </select>
+      <label>Reward Amount (₹)</label>
+      <input id="newTaskReward" type="number" min="1" placeholder="Enter reward">
+      <label>Task Link (optional)</label>
+      <input id="newTaskLink" type="url" placeholder="https://...">
+      <button class="btn" onclick="saveNewTask('active')">Publish Task</button>
+      <button class="btn light" onclick="saveNewTask('draft')">Save as Draft</button>
+      <button class="btn light" onclick="showAdminDashboard()">Cancel</button>
+    </div>
+  `);
+}
+async function saveNewTask(status){
+  if(!requireAdmin())return;
+  const title=document.getElementById("newTaskTitle").value.trim();
+  const description=document.getElementById("newTaskDescription").value.trim();
+  const category=document.getElementById("newTaskCategory").value;
+  const reward=Number(document.getElementById("newTaskReward").value);
+  const taskUrl=document.getElementById("newTaskLink").value.trim();
+  if(!title||!description||!Number.isFinite(reward)||reward<=0){
+    showMessage("Please fill title, description and a valid reward.");return;
+  }
+  if(taskUrl && !/^https?:\/\//i.test(taskUrl)){
+    showMessage("Task link must start with http:// or https://");return;
+  }
+  const {error}=await db.from("tasks").insert({
+    title,
+    description,
+    category,
+    reward_paise:Math.round(reward*100),
+    task_url:taskUrl||null,
+    status
+  });
+  if(error){showMessage(error.message);return;}
+  showMessage(status==="active"?"Task published!":"Task saved as draft!");
+  renderAdminTasks();
+}
+async function renderAdminTasks(){
+  if(!requireAdmin())return;
+  adminShell(`<div class="card"><h3>Your Tasks</h3><p>Loading tasks...</p></div>`);
+  const {data,error}=await db.from("tasks").select("*").order("created_at",{ascending:false});
+  if(error){
+    adminShell(`<div class="card">Unable to load tasks: ${safe(error.message)}</div>`);
+    return;
+  }
+  let html=`<div class="card"><h3>Your Tasks</h3>
+    <button class="btn" onclick="renderCreateTaskPage()">＋ Create Task</button>`;
+  if(!data?.length)html+=`<p>No tasks created yet.</p>`;
+  for(const t of data||[]){
+    html+=`
+      <hr><div class="row"><b>${safe(t.title)}</b><span class="pill">${safe(t.status)}</span></div>
+      <p class="muted">${safe(t.category||"Task")} · ${money(t.reward_paise)}</p>
+      <button class="btn small light" onclick="editTask('${safe(t.id)}')">Edit</button>
+      <button class="btn small light" onclick="toggleTask('${safe(t.id)}','${safe(t.status)}')">${t.status==="active"?"Pause":"Activate"}</button>
+      <button class="btn small red" onclick="deleteTask('${safe(t.id)}')">Delete</button>`;
+  }
+  html+=`</div>`;
+  adminShell(html);
+}
+async function editTask(taskId){
+  if(!requireAdmin())return;
+  const {data,error}=await db.from("tasks").select("*").eq("id",taskId).single();
+  if(error){showMessage(error.message);return;}
+  adminShell(`
+    <div class="card">
+      <h3>Edit Task</h3>
+      <label>Title</label><input id="editTitle" value="${safe(data.title)}">
+      <label>Description</label><textarea id="editDescription">${safe(data.description||"")}</textarea>
+      <label>Category</label><input id="editCategory" value="${safe(data.category||"")}" >
+      <label>Reward (₹)</label><input id="editReward" type="number" value="${Number(data.reward_paise||0)/100}">
+      <label>Task Link</label><input id="editLink" value="${safe(data.task_url||"")}">
+      <button class="btn" onclick="updateTask('${safe(taskId)}')">Save Changes</button>
+      <button class="btn light" onclick="renderAdminTasks()">Cancel</button>
+    </div>
+  `);
+}
+async function updateTask(taskId){
+  if(!requireAdmin())return;
+  const title=document.getElementById("editTitle").value.trim();
+  const description=document.getElementById("editDescription").value.trim();
+  const category=document.getElementById("editCategory").value.trim();
+  const reward=Number(document.getElementById("editReward").value);
+  const taskUrl=document.getElementById("editLink").value.trim();
+  if(!title||!description||!Number.isFinite(reward)||reward<=0){
+    showMessage("Enter valid task details.");return;
+  }
+  const {error}=await db.from("tasks").update({
+    title,description,category,
+    reward_paise:Math.round(reward*100),
+    task_url:taskUrl||null
+  }).eq("id",taskId);
+  if(error){showMessage(error.message);return;}
+  showMessage("Task updated.");
+  renderAdminTasks();
+}
+async function toggleTask(taskId,status){
+  if(!requireAdmin())return;
+  const next=status==="active"?"paused":"active";
+  const {error}=await db.from("tasks").update({status:next}).eq("id",taskId);
+  if(error){showMessage(error.message);return;}
+  renderAdminTasks();
+}
+async function deleteTask(taskId){
+  if(!requireAdmin())return;
+  if(!confirm("Delete this task?"))return;
+  const {error}=await db.from("tasks").delete().eq("id",taskId);
+  if(error){showMessage(error.message);return;}
+  showMessage("Task deleted.");
+  renderAdminTasks();
+}
+async function renderApprovalsPage(){
+  if(!requireAdmin())return;
+  adminShell(`<div class="card"><h3>Task Approvals</h3><p>Loading submissions...</p></div>`);
+  const {data,error}=await db.rpc("admin_list_submissions");
+  if(error){
+    adminShell(`<div class="card">Unable to load submissions: ${safe(error.message)}</div>`);
+    return;
+  }
+  cachedSubmissions=data||[];
+  let html=`<div class="card"><h3>Task Approvals</h3>`;
+  if(!cachedSubmissions.length)html+=`<p>No submissions found.</p>`;
+  for(const s of cachedSubmissions){
+    const taskName=s.task_title||s.title||"Task submission";
+    html+=`
+      <hr>
+      <b>${safe(taskName)}</b>
+      <p class="muted">User: ${safe(s.username||s.user_id||"Unknown")}</p>
+      <p class="status ${safe(s.status)}">${safe(s.status||"pending")}</p>
+      ${s.proof_text?`<p>${safe(s.proof_text)}</p>`:""}
+      ${s.proof_url?`<p><a href="${safe(s.proof_url)}" target="_blank" rel="noopener">Open proof link</a></p>`:""}
+      ${s.proof_path?`<button class="btn small light" onclick="viewProof('${safe(s.proof_path)}')">View Screenshot</button>`:""}
+      ${s.status==="pending"?`
+        <button class="btn small green" onclick="reviewTask('${safe(s.id)}',true)">Approve</button>
+        <button class="btn small red" onclick="reviewTask('${safe(s.id)}',false)">Reject</button>
+      `:""}
+    `;
+  }
+  html+=`</div>`;
+  adminShell(html);
+}
+async function viewProof(path){
+  if(!requireAdmin())return;
+  const {data,error}=await db.storage.from("proofs").createSignedUrl(path,300);
+  if(error){showMessage(error.message);return;}
+  window.open(data.signedUrl,"_blank");
+}
+async function reviewTask(submissionId,approved){
+  if(!requireAdmin())return;
+  const {error}=await db.rpc("review_submission",{
+    p_submission_id:submissionId,
+    p_approved:approved
+  });
+  if(error){showMessage(error.message);return;}
+  showMessage(approved?"Submission approved.":"Submission rejected.");
+  renderApprovalsPage();
+ }async function renderAdminWithdrawals(){
+  if(!requireAdmin())return;
+  adminShell(`<div class="card"><h3>Withdrawals</h3><p>Loading...</p></div>`);
+  const {data,error}=await db.rpc("admin_list_withdrawals");
+  if(error){
+    adminShell(`<div class="card">Unable to load withdrawals: ${safe(error.message)}</div>`);
+    return;
+  }
+  cachedWithdrawals=data||[];
+  let html=`<div class="card"><h3>Withdrawal Requests</h3>`;
+  if(!cachedWithdrawals.length)html+=`<p>No withdrawal requests.</p>`;
+  for(const w of cachedWithdrawals){
+    html+=`
+      <hr>
+      <b>${money(w.amount_paise)}</b>
+      <p>User: ${safe(w.full_name||w.user_id||"Unknown")}</p>
+      <p>UPI: ${safe(w.upi_id||"Not provided")}</p>
+      <p class="status ${safe(w.status)}">${safe(w.status)}</p>
+      ${w.status==="pending"?`
+        <button class="btn small green" onclick="reviewWithdrawal('${safe(w.id)}','paid')">Mark Paid</button>
+        <button class="btn small red" onclick="reviewWithdrawal('${safe(w.id)}','rejected')">Reject</button>
+      `:""}
+    `;
+  }
+  html+=`</div>`;
+  adminShell(html);
+}
+async function reviewWithdrawal(id,status){
+  if(!requireAdmin())return;
+  const action=status==="paid"?"mark this request as paid":"reject this request";
+  if(!confirm("Are you sure you want to "+action+"?"))return;
+  const {error}=await db.rpc("review_withdrawal",{
+    p_withdrawal_id:id,
+    p_status:status
+  });
+  if(error){showMessage(error.message);return;}
+  showMessage("Withdrawal status updated.");
+  renderAdminWithdrawals();
+}
+async function renderManageUsersPage(){
+  if(!requireAdmin())return;
+  adminShell(`
+    <div class="card">
+      <h3>Manage Users</h3>
+      <input id="userSearch" placeholder="Search username or user ID">
+      <button class="btn" onclick="loadAdminUsers()">Search Users</button>
+      <div id="usersResult"><p class="muted">Enter a search term or load users.</p></div>
+    </div>
+  `);
+  loadAdminUsers();
+}
+async function loadAdminUsers(){
+  if(!requireAdmin())return;
+  const result=document.getElementById("usersResult");
+  if(!result)return;
+  result.innerHTML="Loading users...";
+  const {data,error}=await db.rpc("admin_list_users");
+  if(error){result.innerHTML=`<p>${safe(error.message)}</p>`;return;}
+  const term=(document.getElementById("userSearch")?.value||"").toLowerCase();
+  const users=(data||[]).filter(u=>
+    !term ||
     String(u.username||"").toLowerCase().includes(term) ||
-    String(u.user_id||"").toLowerCase().includes(term)
-   );
-
-   count.textContent="Total users: "+users.length+" | Showing: "+filtered.length;
-
-   if(!filtered.length){
-    list.innerHTML=`<div class="activity">No users found.</div>`;
-    return;
-   }
-
-   list.innerHTML=filtered.map(u=>`
-    <div class="task-row">
-     <h4>👤 ${escapeHTML(u.username||"No username")}</h4>
-     <p>User ID: ${escapeHTML(u.user_id)}</p>
-     <p>Wallet Balance: <b>${rupees(u.balance_paise)}</b></p>
+    String(u.user_id||u.id||"").toLowerCase().includes(term)
+  );
+  if(!users.length){result.innerHTML="<p>No users found.</p>";return;}
+  result.innerHTML=users.map(u=>`
+    <div class="card">
+      <b>${safe(u.username||"User")}</b>
+      <p class="muted">${safe(u.user_id||u.id||"")}</p>
+      <p>Wallet: ${money(u.balance_paise)}</p>
     </div>
-   `).join("");
-  }
-
-  async function loadUsers(){
-   if(!adminVerified||!currentUser)return;
-
-   refresh.disabled=true;
-   list.textContent="Loading users...";
-   count.textContent="Fetching registered users...";
-
-   const {data,error}=await client.rpc("admin_list_users");
-
-   refresh.disabled=false;
-
-   if(error){
-    users=[];
-    count.textContent="Unable to load users.";
-    list.textContent=error.message;
-    return;
-   }
-
-   users=data||[];
-   displayUsers();
-  }
-
-  search.oninput=displayUsers;
-  refresh.onclick=loadUsers;
-
-  await loadUsers();
- }
-
- async function renderWithdrawalsPage(){
-  if(!adminVerified||!currentUser)return;
-  content.innerHTML=`
-   <header class="header"><div class="brand"><div class="logo">✦</div><div><h2>HYY EARN</h2><p>Withdrawals</p></div></div></header>
-   <button class="back-btn" id="backAdmin">← Admin Dashboard</button>
-   <section class="admin-head"><h2>💸 Withdrawals</h2><p style="margin:0;opacity:.85;font-size:13px">Only mark as Paid after manually sending the payment.</p></section>
-   <section class="admin-item"><div id="wdList" class="muted">Loading requests...</div></section>`;
-  document.getElementById("backAdmin").onclick=showAdminDashboard;
-
-  const list=document.getElementById("wdList");
-  const {data,error}=await client.rpc("admin_list_withdrawals");
-  if(error){list.textContent="Unable to load: "+error.message;return}
-  if(!data||!data.length){list.textContent="No withdrawal requests yet.";return}
-
-  const labels={pending:"⏳ Pending",paid:"✅ Paid",rejected:"❌ Rejected"};
-  list.innerHTML=data.map(w=>{
-   const buttons=w.status==="pending"
-    ?`<div class="task-actions">
-       <button class="small-btn approve" data-paid="${escapeHTML(w.id)}">✔ Mark Paid</button>
-       <button class="small-btn delete" data-rej="${escapeHTML(w.id)}">✖ Reject</button>
-      </div>`:"";
-   return `<div class="task-row">
-    <h4>${rupees(w.amount_paise)}</h4>
-    <p>Full Name: ${escapeHTML(w.full_name||"Not returned by admin function")}</p>
-    <p>User: ${escapeHTML(w.username||"unknown")}</p>
-    <p>UPI: ${escapeHTML(w.upi_id)}</p>
-    <p>${escapeHTML(new Date(w.created_at).toLocaleString())}</p>
-    <div style="margin-top:10px"><span class="task-status">${labels[w.status]||escapeHTML(w.status)}</span></div>
-    ${buttons}
-   </div>`;
-  }).join("");
-
-  async function reviewWd(id,paid){
-   const msg=paid
-    ?"Have you sent the payment to the UPI ID? Mark as Paid?"
-    :"Rejecting this request will return the amount to the user's wallet. Continue?";
-   if(!confirm(msg))return;
-   showStatus("Updating...");
-   const {error:rErr}=await client.rpc("review_withdrawal",{p_id:Number(id),p_paid:paid});
-   if(rErr){showStatus(rErr.message.includes("Already")?"Already reviewed.":rErr.message);return}
-   showStatus(paid?"Marked as paid.":"Rejected. Amount refunded.",true);
-   renderWithdrawalsPage();
-  }
-  list.querySelectorAll("[data-paid]").forEach(b=>{b.onclick=()=>reviewWd(b.dataset.paid,true)});
-  list.querySelectorAll("[data-rej]").forEach(b=>{b.onclick=()=>reviewWd(b.dataset.rej,false)});
- }
-
- async function renderApprovalsPage(){
-  if(!adminVerified||!currentUser)return;
-  content.innerHTML=`
-   <header class="header"><div class="brand"><div class="logo">✦</div><div><h2>HYY EARN</h2><p>Task Approvals</p></div></div></header>
-   <button class="back-btn" id="backAdmin">← Admin Dashboard</button>
-   <section class="admin-head"><h2>✅ Task Approvals</h2><p style="margin:0;opacity:.85;font-size:13px">Approving a submission will add the reward to the user's wallet.</p></section>
-   <section class="admin-item"><div id="subList" class="muted">Loading submissions...</div></section>`;
-  document.getElementById("backAdmin").onclick=showAdminDashboard;
-
-  const list=document.getElementById("subList");
-  const {data,error}=await client.rpc("admin_list_submissions");
-  if(error){list.textContent="Unable to load: "+error.message;return}
-  if(!data||!data.length){list.textContent="No submissions yet.";return}
-
-  const urls={};
-  await Promise.all(data.filter(s=>s.proof_path).map(async s=>{
-   const {data:signed}=await client.storage.from("proofs").createSignedUrl(s.proof_path,600);
-   if(signed&&signed.signedUrl)urls[s.id]=signed.signedUrl;
-  }));
-
-  const labels={pending:"⏳ Pending",approved:"✅ Approved",rejected:"❌ Rejected"};
-  list.innerHTML=data.map(s=>{
-   const img=urls[s.id]?`<a href="${escapeHTML(urls[s.id])}" target="_blank" rel="noopener noreferrer"><img class="proof-img" src="${escapeHTML(urls[s.id])}" alt="Proof screenshot"></a>`:"";
-   const href=safeHref(s.proof_url);
-   const link=href?`<p><a class="task-link" href="${escapeHTML(href)}" target="_blank" rel="noopener noreferrer">Open proof link →</a></p>`:"";
-   const buttons=s.status==="pending"
-    ?`<div class="task-actions">
-       <button class="small-btn approve" data-approve="${escapeHTML(s.id)}">✔ Approve</button>
-       <button class="small-btn delete" data-reject="${escapeHTML(s.id)}">✖ Reject</button>
-      </div>`:"";
-   return `<div class="task-row">
-    <h4>${escapeHTML(s.task_title||"(deleted task)")}</h4>
-    <p>User: ${escapeHTML(s.username||"unknown")}</p>
-    <p>Reward: ${rupees(s.reward_paise)}</p>
-    <p>${escapeHTML(s.proof_text||"No text")}</p>
-    ${link}${img}
-    <div style="margin-top:10px"><span class="task-status">${labels[s.status]||escapeHTML(s.status)}</span></div>
-    ${buttons}
-   </div>`;
-  }).join("");
-
-  async function review(id,approve){
-   const msg=approve
-    ?"Approving this submission will add the reward to the user's wallet. Continue?"
-    :"Are you sure you want to reject this submission?";
-   if(!confirm(msg))return;
-   showStatus("Updating...");
-   const {error:rErr}=await client.rpc("review_submission",{p_id:id,p_approve:approve});
-   if(rErr){showStatus(rErr.message.includes("Already")?"Already reviewed.":rErr.message);return}
-   showStatus(approve?"Approved! Reward added.":"Rejected.",true);
-   renderApprovalsPage();
-  }
-  list.querySelectorAll("[data-approve]").forEach(b=>{b.onclick=()=>review(b.dataset.approve,true)});
-  list.querySelectorAll("[data-reject]").forEach(b=>{b.onclick=()=>review(b.dataset.reject,false)});
- }
-
- async function loadAdminTasks(){
-  const list=document.getElementById("adminTaskList");
-  if(!list)return;
-  const {data,error}=await client.from("tasks")
-   .select("id,title,description,category,reward_paise,task_url,status,created_at")
-   .order("created_at",{ascending:false});
-  if(error){list.textContent="Unable to load tasks: "+error.message;return}
-  if(!data||!data.length){list.textContent="No tasks created yet.";return}
-  list.innerHTML=data.map(task=>{
-   const paused=task.status==="paused";
-   const href=safeHref(task.task_url);
-   return `<div class="task-row">
-    <h4>${escapeHTML(task.title)}</h4>
-    <p>${escapeHTML(task.description||"")}</p>
-    <p>Category: ${escapeHTML(task.category)}</p>
-    <p>Reward: ${rupees(task.reward_paise)}</p>
-    ${href?`<p><a href="${escapeHTML(href)}" target="_blank" rel="noopener noreferrer">Open task link</a></p>`:""}
-    <span class="task-status">${escapeHTML(task.status)}</span>
-    <div class="task-actions">
-     <button class="small-btn" data-edit="${escapeHTML(task.id)}">✏️ Edit</button>
-     <button class="small-btn pause" data-toggle="${escapeHTML(task.id)}" data-status="${paused?"paused":"published"}">${paused?"▶ Resume":"Ⅱ Pause"}</button>
-     <button class="small-btn delete" data-delete="${escapeHTML(task.id)}">🗑 Delete</button>
-    </div>
-   </div>`;
-  }).join("");
-
-  list.querySelectorAll("[data-edit]").forEach(btn=>{
-   btn.onclick=()=>editTask(btn.dataset.edit,data.find(t=>String(t.id)===btn.dataset.edit));
-  });
-  list.querySelectorAll("[data-toggle]").forEach(btn=>{
-   btn.onclick=()=>toggleTask(btn.dataset.toggle,btn.dataset.status);
-  });
-  list.querySelectorAll("[data-delete]").forEach(btn=>{
-   btn.onclick=()=>deleteTask(btn.dataset.delete);
-  });
- }
-
- async function toggleTask(id,currentStatus){
-  if(!adminVerified)return;
-  const newStatus=currentStatus==="paused"?"published":"paused";
-  const label=newStatus==="paused"?"pause":"resume";
-  if(!confirm("Are you sure you want to "+label+" this task?"))return;
-  const {error}=await client.from("tasks").update({status:newStatus}).eq("id",id);
-  if(error){showStatus("Update failed: "+error.message);return}
-  showStatus(newStatus==="paused"?"Task paused.":"Task resumed.",true);
-  loadAdminTasks();
- }
-
- async function deleteTask(id){
-  if(!adminVerified)return;
-  if(!confirm("Permanently delete this task? This cannot be undone."))return;
-  const {error}=await client.from("tasks").delete().eq("id",id);
-  if(error){showStatus("Delete failed: "+error.message);return}
-  showStatus("Task deleted successfully.",true);
-  loadAdminTasks();
- }
-
- function editTask(id,task){
-  if(!adminVerified||!task)return;
-  content.innerHTML=`
-   <header class="header"><div class="brand"><div class="logo">✦</div><div><h2>HYY EARN</h2><p>Edit Task</p></div></div></header>
-   <button class="back-btn" id="backAdmin">← Admin Dashboard</button>
-   <section class="admin-head"><h2>✏️ Edit Task</h2><p style="margin:0;opacity:.85;font-size:13px">Update task details.</p></section>
-   <section class="admin-item">
-    <input id="editTitle" maxlength="100" placeholder="Task title" value="${escapeHTML(task.title)}">
-    <textarea id="editDescription" maxlength="1000" placeholder="Task description">${escapeHTML(task.description||"")}</textarea>
-    <input id="editCategory" maxlength="40" placeholder="Category" value="${escapeHTML(task.category||"General")}">
-    <input id="editReward" type="number" min="0" max="100000" step="0.01" placeholder="Reward amount (₹)" value="${(task.reward_paise||0)/100}">
-    <input id="editUrl" type="url" placeholder="Task link (optional)" value="${escapeHTML(task.task_url||"")}">
-    <button class="action" id="saveEdit">Save Changes</button>
-   </section>`;
-
-  document.getElementById("backAdmin").onclick=showAdminDashboard;
-  document.getElementById("saveEdit").onclick=async()=>{
-   const title=document.getElementById("editTitle").value.trim();
-   const description=document.getElementById("editDescription").value.trim();
-   const category=document.getElementById("editCategory").value.trim()||"General";
-   const reward=Number(document.getElementById("editReward").value);
-   const taskUrl=document.getElementById("editUrl").value.trim();
-   if(!title){showStatus("Please enter a task title.");return}
-   if(!Number.isFinite(reward)||reward<0||reward>100000){showStatus("Please enter a valid reward amount.");return}
-   if(taskUrl&&!safeHref(taskUrl)){showStatus("Please enter a valid task link.");return}
-   const btn=document.getElementById("saveEdit");btn.disabled=true;showStatus("Updating...");
-   const {error}=await client.from("tasks").update({
-    title,description,category,reward_paise:Math.round(reward*100),task_url:taskUrl||null
-   }).eq("id",id);
-   btn.disabled=false;
-   if(error){showStatus("Edit failed: "+error.message);return}
-   showStatus("Task updated successfully!",true);
-   showAdminDashboard();
-  };
- }
-
- function renderCreateTaskPage(){
-  if(!adminVerified||!currentUser)return;
-  content.innerHTML=`
-   <header class="header"><div class="brand"><div class="logo">✦</div><div><h2>HYY EARN</h2><p>Create New Task</p></div></div></header>
-   <button class="back-btn" id="backAdmin">← Admin Dashboard</button>
-   <section class="admin-head"><h2>➕ Create Tasks</h2><p style="margin:0;opacity:.85;font-size:13px">Add a new task for users.</p></section>
-   <section class="admin-item"><h3>Task Details</h3>
-    <input id="taskTitle" maxlength="100" placeholder="Task title">
-    <textarea id="taskDescription" maxlength="1000" placeholder="Task description"></textarea>
-    <input id="taskCategory" maxlength="40" placeholder="Category (e.g. Survey)">
-    <input id="taskReward" type="number" min="0" max="100000" step="0.01" placeholder="Reward amount (₹)">
-    <input id="taskUrl" type="url" placeholder="Task link (optional)">
-    <button class="action" id="publishTask">Publish Task</button>
-    <button class="action" id="saveDraft" style="background:#eee3f8;color:#7138c8">Save as Draft</button>
-   </section>`;
-
-  document.getElementById("backAdmin").onclick=showAdminDashboard;
-  async function createTask(taskStatus){
-   const title=document.getElementById("taskTitle").value.trim();
-   const description=document.getElementById("taskDescription").value.trim();
-   const category=document.getElementById("taskCategory").value.trim()||"General";
-   const reward=Number(document.getElementById("taskReward").value);
-   const taskUrl=document.getElementById("taskUrl").value.trim();
-   if(!title){showStatus("Please enter a task title.");return}
-   if(!Number.isFinite(reward)||reward<0||reward>100000){showStatus("Please enter a valid reward amount.");return}
-   if(taskUrl&&!safeHref(taskUrl)){showStatus("Please enter a valid task link.");return}
-   const btn=document.getElementById(taskStatus==="published"?"publishTask":"saveDraft");
-   btn.disabled=true;showStatus("Saving task...");
-   const {error}=await client.from("tasks").insert({
-    title,description,category,reward_paise:Math.round(reward*100),
-    task_url:taskUrl||null,status:taskStatus
-   });
-   btn.disabled=false;
-   if(error){showStatus("Task save failed: "+error.message);return}
-   showStatus(taskStatus==="published"?"Task published successfully!":"Task saved as draft!",true);
-   renderCreateTaskPage();
-  }
-  document.getElementById("publishTask").onclick=()=>createTask("published");
-  document.getElementById("saveDraft").onclick=()=>createTask("draft");
- }
-
- loadAdminTasks();
+  `).join("");
 }
 
-async function loadUser(user){
- currentUser=user;showStatus("Loading profile...");
- const {data:profile,error}=await client.from("profilea").select("username").eq("id",user.id).maybeSingle();
- if(error){showStatus(error.message);return}
- showStatus("");
- if(profile)await showDashboard(profile.username,user);
- else showUsername(user);
-}
-
-async function checkLogin(){
- const {data,error}=await client.auth.getSession();
- if(error){showStatus(error.message);showLogin();return}
- const user=data.session?.user;
- if(!user){showLogin();return}
- await loadUser(user);
-}
-
-client.auth.onAuthStateChange((event,session)=>{
- if(event==="INITIAL_SESSION")return;
- if(session?.user&&event==="SIGNED_IN")setTimeout(()=>loadUser(session.user),0);
- else if(event==="SIGNED_OUT"){adminVerified=false;showLogin()}
+db.auth.onAuthStateChange((event,session)=>{
+  if(event==="SIGNED_OUT"){
+    currentUser=null;
+    showLogin();
+  }
+  if(event==="SIGNED_IN" && session?.user && !currentUser){
+    currentUser=session.user;
+    startApp();
+  }
 });
 
-async function start(){
- const code=new URLSearchParams(location.search).get("code");
- if(code){
-  showStatus("Finishing login...");
-  const {error}=await client.auth.exchangeCodeForSession(code);
-  history.replaceState({},"",location.pathname);
-  if(error)showStatus("Exchange error: "+error.message);
- }
- await checkLogin();
-}
-start();
+startApp();
 </script>
 </body>
 </html>
