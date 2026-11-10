@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -28,9 +29,9 @@ label{font-size:13px;font-weight:bold}
 .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
 .tile{background:#fff;border-radius:15px;padding:16px;text-align:center;font-weight:bold;cursor:pointer}
 .nav{position:fixed;bottom:0;left:0;right:0;background:white;display:flex;justify-content:space-around;padding:9px 2px calc(9px + env(safe-area-inset-bottom));box-shadow:0 -3px 15px #32106418;z-index:8}
-.nav button{background:transparent;color:#806d9b;font-size:11px;display:flex;flex-direction:column;align-items:center;gap:4px;flex:1}
+.nav button{background:transparent;color:#806d9b;font-size:10px;display:flex;flex-direction:column;align-items:center;gap:4px;flex:1}
 .nav button.active{color:#6d28d9;font-weight:bold}
-.nav span{font-size:20px}
+.nav span{font-size:19px}
 .hidden{display:none!important}
 .row{display:flex;justify-content:space-between;align-items:center;gap:10px}
 .pill{display:inline-block;background:#eee5ff;color:#6d28d9;padding:5px 9px;border-radius:20px;font-size:11px}
@@ -44,8 +45,12 @@ hr{border:0;border-top:1px solid #eee;margin:14px 0}
 .menu{position:absolute;right:15px;top:60px;background:white;color:#321064;padding:12px;border-radius:12px;box-shadow:0 5px 20px #0002;min-width:180px}
 .menu button{display:block;width:100%;text-align:left;padding:10px;background:white;color:#321064}
 .task{border:1px solid #eee5ff}
-.task h3{margin:5px 0}
 .center{text-align:center;padding:35px 10px}
+.ref-code{font-size:23px;font-weight:bold;letter-spacing:2px;background:#f5eaff;padding:14px;border-radius:12px;text-align:center;overflow-wrap:anywhere}
+.stat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.stat-box{background:#f8f4ff;padding:14px;border-radius:12px}
+.stat-box b{font-size:22px;display:block;margin-top:5px}
+.rule-list{padding-left:20px;line-height:1.7;font-size:14px}
 </style>
 </head>
 <body>
@@ -56,6 +61,7 @@ hr{border:0;border-top:1px solid #eee;margin:14px 0}
   <div id="profileMenu" class="menu hidden">
     <div id="menuUsername" style="padding:8px;font-weight:bold"></div>
     <button onclick="openPage('profile')">My Profile</button>
+    <button onclick="openPage('refer')">Refer & Earn</button>
     <button id="adminMenuBtn" class="hidden" onclick="adminLogin()">Admin Dashboard</button>
     <button onclick="logout()">Logout</button>
   </div>
@@ -68,6 +74,7 @@ hr{border:0;border-top:1px solid #eee;margin:14px 0}
 <nav id="bottomNav" class="nav hidden">
   <button data-page="home" onclick="openPage('home')"><span>🏠</span>Home</button>
   <button data-page="task" onclick="openPage('task')"><span>📋</span>Task</button>
+  <button data-page="refer" onclick="openPage('refer')"><span>🎁</span>Refer</button>
   <button data-page="community" onclick="openPage('community')"><span>👥</span>Community</button>
   <button data-page="wallet" onclick="openPage('wallet')"><span>💰</span>Wallet</button>
   <button data-page="profile" onclick="openPage('profile')"><span>👤</span>Profile</button>
@@ -88,6 +95,13 @@ const db = window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{
   }
 });
 
+// Save referral code before Google login / redirect.
+const incomingReferral=new URLSearchParams(window.location.search).get("ref");
+if(incomingReferral){
+  localStorage.setItem("hyy_pending_referral",incomingReferral.trim());
+  window.history.replaceState({},document.title,window.location.pathname);
+}
+
 let currentUser=null;
 let username="";
 let walletBalance=0;
@@ -97,6 +111,8 @@ let currentPage="home";
 let cachedTasks=[];
 let cachedSubmissions=[];
 let cachedWithdrawals=[];
+let myReferralCode="";
+let referralStats={total_referrals:0,completed:0,pending:0,total_earned_paise:0};
 
 const app=document.getElementById("app");
 const modalRoot=document.getElementById("modalRoot");
@@ -109,18 +125,14 @@ function safe(value){
     "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
   }[c]));
 }
-function showMessage(message){
-  alert(message);
-}
+function showMessage(message){alert(message);}
 function toggleMenu(){
   document.getElementById("profileMenu").classList.toggle("hidden");
 }
 function closeMenu(){
   document.getElementById("profileMenu").classList.add("hidden");
 }
-function setPage(html){
-  app.innerHTML=html;
-}
+function setPage(html){app.innerHTML=html;}
 function updateNav(){
   document.querySelectorAll(".nav button").forEach(b=>{
     b.classList.toggle("active",b.dataset.page===currentPage);
@@ -151,14 +163,31 @@ async function checkAdmin(){
 async function refreshAccount(){
   await Promise.all([getWallet(),getUsername(),checkAdmin()]);
 }
-async function startApp(){
-  const {data:{session}}=await db.auth.getSession();
-  if(!session){
-    showLogin();
+
+// Link the referral after the invited person has logged in.
+async function processPendingReferral(){
+  const code=localStorage.getItem("hyy_pending_referral");
+  if(!code||!currentUser)return;
+
+  const {data,error}=await db.rpc("register_referral",{p_code:code});
+  if(error){
+    console.error("Referral registration error:",error);
     return;
   }
+  localStorage.removeItem("hyy_pending_referral");
+  if(data===true){
+    console.log("Referral successfully linked.");
+  }else{
+    console.log("Referral code invalid, already used, or self-referral.");
+  }
+}
+
+async function startApp(){
+  const {data:{session}}=await db.auth.getSession();
+  if(!session){showLogin();return;}
   currentUser=session.user;
   await refreshAccount();
+  await processPendingReferral();
   document.getElementById("bottomNav").classList.remove("hidden");
   openPage("home");
 }
@@ -179,7 +208,7 @@ async function googleLogin(){
     provider:"google",
     options:{redirectTo:window.location.origin}
   });
-  if(error) showMessage(error.message);
+  if(error)showMessage(error.message);
 }
 async function logout(){
   closeMenu();
@@ -194,12 +223,14 @@ async function openPage(page){
   closeMenu();
   document.getElementById("bottomNav").classList.remove("hidden");
 
-  if(page==="home") return renderHome();
-  if(page==="task") return renderTasks();
-  if(page==="community") return renderCommunity();
-  if(page==="wallet") return renderWallet();
-  if(page==="profile") return renderProfile();
+  if(page==="home")return renderHome();
+  if(page==="task")return renderTasks();
+  if(page==="refer")return renderReferPage();
+  if(page==="community")return renderCommunity();
+  if(page==="wallet")return renderWallet();
+  if(page==="profile")return renderProfile();
 }
+
 async function renderHome(){
   await getWallet();
   setPage(`
@@ -232,8 +263,9 @@ async function renderHome(){
     </div>
 
     <div class="card">
-      <h3>Refer & Earn</h3>
-      <p class="muted">Referral feature coming soon.</p>
+      <h3>Refer & Earn 💜</h3>
+      <p class="muted">Invite friends. Earn ₹10 when their first task is approved.</p>
+      <button class="btn" onclick="openPage('refer')">Invite Friends</button>
     </div>
   `);
 }
@@ -244,9 +276,8 @@ async function dailyCheckin(){
   await getWallet();
   renderHome();
 }
-function comingSoon(){
-  showMessage("Coming Soon!");
-}
+function comingSoon(){showMessage("Coming Soon!");}
+
 async function renderTasks(){
   setPage(`<h2>Available Tasks 📋</h2><p class="muted">Loading tasks...</p>`);
   const {data,error}=await db.from("tasks")
@@ -260,9 +291,7 @@ async function renderTasks(){
   cachedTasks=data||[];
   let html=`<h2>Available Tasks 📋</h2>
     <p class="muted">Choose a task to view its details.</p>`;
-  if(!cachedTasks.length){
-    html+=`<div class="card center">No active tasks right now.</div>`;
-  }
+  if(!cachedTasks.length)html+=`<div class="card center">No active tasks right now.</div>`;
   for(const task of cachedTasks){
     html+=`
       <div class="card task">
@@ -296,26 +325,23 @@ async function openTask(taskId){
       <h3>${money(task.reward_paise)} reward</h3>
       <p>${safe(task.description||"No description available.")}</p>
       ${task.task_url?`<p><a href="${safe(task.task_url)}" target="_blank" rel="noopener">Open Task Link ↗</a></p>`:""}
-      <hr>
-      ${statusHtml}
+      <hr>${statusHtml}
     </div>
   `);
 }
 function openProof(taskId){
   modalRoot.innerHTML=`
-    <div class="modal">
-      <div class="modalbox">
-        <h3>Submit Task Proof</h3>
-        <label>Proof description</label>
-        <textarea id="proofText" placeholder="Describe what you completed"></textarea>
-        <label>Proof link (optional)</label>
-        <input id="proofUrl" placeholder="https://...">
-        <label>Screenshot (optional, JPG/PNG/WebP, max 5 MB)</label>
-        <input id="proofFile" type="file" accept="image/jpeg,image/png,image/webp">
-        <button class="btn" onclick="submitProof('${safe(taskId)}')">Submit Proof</button>
-        <button class="btn light" onclick="closeModal()">Cancel</button>
-      </div>
-    </div>`;
+    <div class="modal"><div class="modalbox">
+      <h3>Submit Task Proof</h3>
+      <label>Proof description</label>
+      <textarea id="proofText" placeholder="Describe what you completed"></textarea>
+      <label>Proof link (optional)</label>
+      <input id="proofUrl" placeholder="https://...">
+      <label>Screenshot (optional, JPG/PNG/WebP, max 5 MB)</label>
+      <input id="proofFile" type="file" accept="image/jpeg,image/png,image/webp">
+      <button class="btn" onclick="submitProof('${safe(taskId)}')">Submit Proof</button>
+      <button class="btn light" onclick="closeModal()">Cancel</button>
+    </div></div>`;
 }
 function closeModal(){modalRoot.innerHTML="";}
 async function submitProof(taskId){
@@ -323,8 +349,10 @@ async function submitProof(taskId){
   const proofUrl=document.getElementById("proofUrl").value.trim();
   const file=document.getElementById("proofFile").files[0];
   if(!proofText&&!proofUrl&&!file){
-    showMessage("Please add proof text, a link, or a screenshot.");
-    return;
+    showMessage("Please add proof text, a link, or a screenshot.");return;
+  }
+  if(proofUrl&&!/^https?:\/\//i.test(proofUrl)){
+    showMessage("Proof link must start with http:// or https://");return;
   }
   let proofPath=null;
   if(file){
@@ -348,6 +376,136 @@ async function submitProof(taskId){
   showMessage("Proof submitted for review!");
   openTask(taskId);
 }
+
+// REFER & EARN
+async function renderReferPage(){
+  setPage(`<div class="card center"><h2>🎁 Refer & Earn</h2><p>Loading your referral details...</p></div>`);
+
+  const [codeResult,statsResult]=await Promise.all([
+    db.rpc("get_my_referral_code"),
+    db.rpc("get_referral_stats")
+  ]);
+
+  if(codeResult.error){
+    setPage(`
+      <div class="card">
+        <h2>🎁 Refer & Earn</h2>
+        <p>Unable to load referral code.</p>
+        <p class="muted">${safe(codeResult.error.message)}</p>
+        <button class="btn light" onclick="openPage('home')">Back Home</button>
+      </div>`);
+    return;
+  }
+
+  myReferralCode=codeResult.data;
+  if(statsResult.error){
+    console.error("Referral stats error:",statsResult.error);
+    referralStats={total_referrals:0,completed:0,pending:0,total_earned_paise:0};
+  }else{
+    const row=Array.isArray(statsResult.data)?statsResult.data[0]:statsResult.data;
+    referralStats=row||{total_referrals:0,completed:0,pending:0,total_earned_paise:0};
+  }
+
+  const referralLink=`${window.location.origin}/?ref=${encodeURIComponent(myReferralCode)}`;
+
+  setPage(`
+    <button class="btn light" onclick="openPage('home')">← Back Home</button>
+
+    <div class="card hero center">
+      <div style="font-size:42px">🎁</div>
+      <h2>Refer Friends & Earn ₹10</h2>
+      <p>Invite your friends to HYY EARN.</p>
+      <div class="big">₹10</div>
+      <p>For every successful referral</p>
+    </div>
+
+    <div class="card">
+      <h3>Your Referral Code</h3>
+      <div class="ref-code" id="refCodeText">${safe(myReferralCode)}</div>
+      <button class="btn" style="width:100%;margin-top:12px" onclick="copyReferralCode()">Copy Referral Code</button>
+      <hr>
+      <label>Your Referral Link</label>
+      <input id="referralLinkInput" value="${safe(referralLink)}" readonly>
+      <button class="btn light" style="width:100%" onclick="copyReferralLink()">Copy Referral Link</button>
+      <button class="btn" style="width:100%;margin-top:8px" onclick="shareReferral()">Share with Friends</button>
+    </div>
+
+    <div class="card">
+      <h3>Your Referral Statistics</h3>
+      <div class="stat-grid">
+        <div class="stat-box"><span class="muted">Total Referrals</span><b>${Number(referralStats.total_referrals||0)}</b></div>
+        <div class="stat-box"><span class="muted">Completed</span><b>${Number(referralStats.completed||0)}</b></div>
+        <div class="stat-box"><span class="muted">Pending</span><b>${Number(referralStats.pending||0)}</b></div>
+        <div class="stat-box"><span class="muted">Total Earned</span><b>${money(referralStats.total_earned_paise)}</b></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>How It Works</h3>
+      <ol class="rule-list">
+        <li>Share your referral code or referral link with a friend.</li>
+        <li>Your friend opens the link and signs up for HYY EARN.</li>
+        <li>Your friend completes their first available task.</li>
+        <li>Admin reviews and approves that task submission.</li>
+        <li>You receive ₹10 in your wallet after approval.</li>
+      </ol>
+    </div>
+
+    <div class="card">
+      <h3>Referral Rules</h3>
+      <ol class="rule-list">
+        <li>Earn ₹10 for every successful referral.</li>
+        <li>Reward is credited only after the friend's first task is approved.</li>
+        <li>Each friend can be referred only once.</li>
+        <li>Self-referrals are not allowed.</li>
+        <li>Fake or duplicate accounts are not eligible.</li>
+        <li>Referral rewards are credited after approval.</li>
+      </ol>
+    </div>
+  `);
+}
+
+async function copyReferralCode(){
+  if(!myReferralCode)return;
+  try{
+    await navigator.clipboard.writeText(myReferralCode);
+    showMessage("Referral code copied!");
+  }catch(e){
+    prompt("Copy your referral code:",myReferralCode);
+  }
+}
+async function copyReferralLink(){
+  const input=document.getElementById("referralLinkInput");
+  if(!input)return;
+  try{
+    await navigator.clipboard.writeText(input.value);
+    showMessage("Referral link copied!");
+  }catch(e){
+    input.focus();
+    input.select();
+    showMessage("Select and copy the referral link.");
+  }
+}
+async function shareReferral(){
+  if(!myReferralCode)return;
+  const link=`${window.location.origin}/?ref=${encodeURIComponent(myReferralCode)}`;
+  const message=`Join me on HYY EARN! Sign up using my referral link: ${link}`;
+  if(navigator.share){
+    try{
+      await navigator.share({title:"Join HYY EARN",text:message,url:link});
+    }catch(e){
+      if(e.name!=="AbortError")showMessage("Unable to open sharing options.");
+    }
+  }else{
+    try{
+      await navigator.clipboard.writeText(message);
+      showMessage("Invite message copied! Share it with your friends.");
+    }catch(e){
+      prompt("Copy and share this invite:",message);
+    }
+  }
+}
+
 function renderCommunity(){
   setPage(`
     <div class="card center">
@@ -437,30 +595,29 @@ function renderProfile(){
     </div>
     <div class="card">
       <button class="btn light" onclick="openPage('wallet')">My Wallet</button>
+      <button class="btn light" onclick="openPage('refer')">🎁 Refer & Earn</button>
       ${isAdmin?`<button class="btn" onclick="adminLogin()">Admin Dashboard</button>`:""}
       <button class="btn red" onclick="logout()">Logout</button>
     </div>
   `);
-}async function adminLogin(){
+}
+
+async function adminLogin(){
   closeMenu();
   if(!isAdmin){showMessage("Admin access only.");return;}
   const password=prompt("Enter Admin Password");
   if(password===null)return;
-  const {data,error}=await db.functions.invoke("smart-function",{
-    body:{password}
-  });
+  const {data,error}=await db.functions.invoke("smart-function",{body:{password}});
   if(error){showMessage(error.message);return;}
-  if(!data || data.success!==true){
-    showMessage(data?.message||"Admin verification failed.");
-    return;
+  if(!data||data.success!==true){
+    showMessage(data?.message||"Admin verification failed.");return;
   }
   adminVerified=true;
   showAdminDashboard();
 }
 function requireAdmin(){
   if(!isAdmin||!adminVerified){
-    showMessage("Please verify admin access first.");
-    return false;
+    showMessage("Please verify admin access first.");return false;
   }
   return true;
 }
@@ -530,16 +687,13 @@ async function saveNewTask(status){
   if(!title||!description||!Number.isFinite(reward)||reward<=0){
     showMessage("Please fill title, description and a valid reward.");return;
   }
-  if(taskUrl && !/^https?:\/\//i.test(taskUrl)){
+  if(taskUrl&&!/^https?:\/\//i.test(taskUrl)){
     showMessage("Task link must start with http:// or https://");return;
   }
   const {error}=await db.from("tasks").insert({
-    title,
-    description,
-    category,
+    title,description,category,
     reward_paise:Math.round(reward*100),
-    task_url:taskUrl||null,
-    status
+    task_url:taskUrl||null,status
   });
   if(error){showMessage(error.message);return;}
   showMessage(status==="active"?"Task published!":"Task saved as draft!");
@@ -576,7 +730,7 @@ async function editTask(taskId){
       <h3>Edit Task</h3>
       <label>Title</label><input id="editTitle" value="${safe(data.title)}">
       <label>Description</label><textarea id="editDescription">${safe(data.description||"")}</textarea>
-      <label>Category</label><input id="editCategory" value="${safe(data.category||"")}" >
+      <label>Category</label><input id="editCategory" value="${safe(data.category||"")}">
       <label>Reward (₹)</label><input id="editReward" type="number" value="${Number(data.reward_paise||0)/100}">
       <label>Task Link</label><input id="editLink" value="${safe(data.task_url||"")}">
       <button class="btn" onclick="updateTask('${safe(taskId)}')">Save Changes</button>
@@ -593,6 +747,9 @@ async function updateTask(taskId){
   const taskUrl=document.getElementById("editLink").value.trim();
   if(!title||!description||!Number.isFinite(reward)||reward<=0){
     showMessage("Enter valid task details.");return;
+  }
+  if(taskUrl&&!/^https?:\/\//i.test(taskUrl)){
+    showMessage("Task link must start with http:// or https://");return;
   }
   const {error}=await db.from("tasks").update({
     title,description,category,
@@ -632,8 +789,7 @@ async function renderApprovalsPage(){
   for(const s of cachedSubmissions){
     const taskName=s.task_title||s.title||"Task submission";
     html+=`
-      <hr>
-      <b>${safe(taskName)}</b>
+      <hr><b>${safe(taskName)}</b>
       <p class="muted">User: ${safe(s.username||s.user_id||"Unknown")}</p>
       <p class="status ${safe(s.status)}">${safe(s.status||"pending")}</p>
       ${s.proof_text?`<p>${safe(s.proof_text)}</p>`:""}
@@ -657,13 +813,13 @@ async function viewProof(path){
 async function reviewTask(submissionId,approved){
   if(!requireAdmin())return;
   const {error}=await db.rpc("review_submission",{
-    p_submission_id:submissionId,
-    p_approved:approved
+    p_submission_id:submissionId,p_approved:approved
   });
   if(error){showMessage(error.message);return;}
   showMessage(approved?"Submission approved.":"Submission rejected.");
   renderApprovalsPage();
- }async function renderAdminWithdrawals(){
+}
+async function renderAdminWithdrawals(){
   if(!requireAdmin())return;
   adminShell(`<div class="card"><h3>Withdrawals</h3><p>Loading...</p></div>`);
   const {data,error}=await db.rpc("admin_list_withdrawals");
@@ -676,8 +832,7 @@ async function reviewTask(submissionId,approved){
   if(!cachedWithdrawals.length)html+=`<p>No withdrawal requests.</p>`;
   for(const w of cachedWithdrawals){
     html+=`
-      <hr>
-      <b>${money(w.amount_paise)}</b>
+      <hr><b>${money(w.amount_paise)}</b>
       <p>User: ${safe(w.full_name||w.user_id||"Unknown")}</p>
       <p>UPI: ${safe(w.upi_id||"Not provided")}</p>
       <p class="status ${safe(w.status)}">${safe(w.status)}</p>
@@ -695,8 +850,7 @@ async function reviewWithdrawal(id,status){
   const action=status==="paid"?"mark this request as paid":"reject this request";
   if(!confirm("Are you sure you want to "+action+"?"))return;
   const {error}=await db.rpc("review_withdrawal",{
-    p_withdrawal_id:id,
-    p_status:status
+    p_withdrawal_id:id,p_status:status
   });
   if(error){showMessage(error.message);return;}
   showMessage("Withdrawal status updated.");
@@ -723,8 +877,8 @@ async function loadAdminUsers(){
   if(error){result.innerHTML=`<p>${safe(error.message)}</p>`;return;}
   const term=(document.getElementById("userSearch")?.value||"").toLowerCase();
   const users=(data||[]).filter(u=>
-    !term ||
-    String(u.username||"").toLowerCase().includes(term) ||
+    !term||
+    String(u.username||"").toLowerCase().includes(term)||
     String(u.user_id||u.id||"").toLowerCase().includes(term)
   );
   if(!users.length){result.innerHTML="<p>No users found.</p>";return;}
@@ -742,7 +896,7 @@ db.auth.onAuthStateChange((event,session)=>{
     currentUser=null;
     showLogin();
   }
-  if(event==="SIGNED_IN" && session?.user && !currentUser){
+  if(event==="SIGNED_IN"&&session?.user&&!currentUser){
     currentUser=session.user;
     startApp();
   }
