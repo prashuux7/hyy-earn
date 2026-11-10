@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -256,8 +255,7 @@ async function renderWithdrawalHistoryPage(){
  }).join("");
 }
 
-const IMAGE_TYPES={"image/jpeg":"jpg","image/png":"png","image/webp":{}};
-IMAGE_TYPES["image/webp"]="webp";
+const IMAGE_TYPES={"image/jpeg":"jpg","image/png":"png","image/webp":"webp"};
 
 function openSubmitModal(task){
  const old=document.getElementById("submitModal");
@@ -590,7 +588,7 @@ function showAdminDashboard(){
  <section class="admin-item"><h3>📋 Your Tasks</h3><div id="adminTaskList" class="muted">Loading tasks...</div></section>
  <section class="admin-item" id="approvalsCard" style="cursor:pointer"><h3>✅ Task Approvals</h3><p class="muted">Review user proofs, approve or reject.</p><button class="action">Open Task Approvals →</button></section>
  <section class="admin-item" id="withdrawalsCard" style="cursor:pointer"><h3>💸 Withdrawals</h3><p class="muted">Review withdrawal requests, mark paid or reject.</p><button class="action">Open Withdrawals →</button></section>
- <section class="admin-item"><h3>👥 Manage Users</h3><p class="muted">User management will be activated next.</p><span class="admin-tag">Coming next</span></section>
+ <section class="admin-item" id="manageUsersCard" style="cursor:pointer"><h3>👥 Manage Users</h3><p class="muted">View registered users and wallet balances.</p><button class="action">Open Manage Users →</button></section>
  <section class="admin-item"><h3>🔔 Notifications</h3><p class="muted">Notifications will be activated next.</p><span class="admin-tag">Coming next</span></section>`;
 
  document.getElementById("backUser").onclick=()=>{adminVerified=false;showDashboard(currentUsername,currentUser)};
@@ -598,6 +596,96 @@ function showAdminDashboard(){
  document.getElementById("createTasksCard").onclick=renderCreateTaskPage;
  document.getElementById("approvalsCard").onclick=renderApprovalsPage;
  document.getElementById("withdrawalsCard").onclick=renderWithdrawalsPage;
+ document.getElementById("manageUsersCard").onclick=renderManageUsersPage;
+
+ /* MANAGE USERS */
+ async function renderManageUsersPage(){
+  if(!adminVerified||!currentUser)return;
+
+  content.innerHTML=`
+   <header class="header">
+    <div class="brand">
+     <div class="logo">✦</div>
+     <div><h2>HYY EARN</h2><p>Manage Users</p></div>
+    </div>
+   </header>
+
+   <button class="back-btn" id="backAdmin">← Admin Dashboard</button>
+
+   <section class="admin-head">
+    <h2>👥 Manage Users</h2>
+    <p style="margin:0;opacity:.85;font-size:13px">
+     Registered users and wallet balances.
+    </p>
+   </section>
+
+   <section class="admin-item">
+    <input id="userSearch" type="search" placeholder="Search username or user ID">
+    <button class="action" id="refreshUsers">↻ Refresh Users</button>
+    <p id="userCount" class="muted">Loading users...</p>
+    <div id="usersList" class="muted">Please wait...</div>
+   </section>`;
+
+  document.getElementById("backAdmin").onclick=showAdminDashboard;
+
+  const list=document.getElementById("usersList");
+  const search=document.getElementById("userSearch");
+  const count=document.getElementById("userCount");
+  const refresh=document.getElementById("refreshUsers");
+
+  let users=[];
+
+  function displayUsers(){
+   const term=search.value.trim().toLowerCase();
+
+   const filtered=users.filter(u=>
+    String(u.username||"").toLowerCase().includes(term) ||
+    String(u.user_id||"").toLowerCase().includes(term)
+   );
+
+   count.textContent="Total users: "+users.length+" | Showing: "+filtered.length;
+
+   if(!filtered.length){
+    list.innerHTML=`<div class="activity">No users found.</div>`;
+    return;
+   }
+
+   list.innerHTML=filtered.map(u=>`
+    <div class="task-row">
+     <h4>👤 ${escapeHTML(u.username||"No username")}</h4>
+     <p>User ID: ${escapeHTML(u.user_id)}</p>
+     <p>Wallet Balance: <b>${rupees(u.balance_paise)}</b></p>
+    </div>
+   `).join("");
+  }
+
+  async function loadUsers(){
+   if(!adminVerified||!currentUser)return;
+
+   refresh.disabled=true;
+   list.textContent="Loading users...";
+   count.textContent="Fetching registered users...";
+
+   const {data,error}=await client.rpc("admin_list_users");
+
+   refresh.disabled=false;
+
+   if(error){
+    users=[];
+    count.textContent="Unable to load users.";
+    list.textContent=error.message;
+    return;
+   }
+
+   users=data||[];
+   displayUsers();
+  }
+
+  search.oninput=displayUsers;
+  refresh.onclick=loadUsers;
+
+  await loadUsers();
+ }
 
  async function renderWithdrawalsPage(){
   if(!adminVerified||!currentUser)return;
