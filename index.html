@@ -705,12 +705,14 @@ function renderTermsPage(){
   </div>`);
 }
 function renderSupportPage(){
-  setPage(`<button class="btn light" onclick="openPage('profile')">← Profile</button><div class="card">
-    <h2>${svgIcon("help")} Support</h2><p>For help with login, task reviews, referrals or wallet records, share the details below with the platform operator through an official support channel.</p>
-    <label>Your account email</label><input value="${safe(currentUser?.email||"")}" readonly>
-    <label>Your account ID</label><input id="supportUserId" value="${safe(currentUser?.id||"")}" readonly>
-    <button class="btn light" onclick="navigator.clipboard?.writeText(document.getElementById('supportUserId').value).then(()=>showMessage('Account ID copied.')).catch(()=>showMessage('Copy the account ID manually.'))">Copy Account ID</button>
-    <p class="muted">The operator must add and verify an official support email/contact before public launch. Never share your password or OTP.</p>
+  setPage(`<button class="btn light" onclick="openPage('profile')">← Profile</button><div class="card center">
+    <h2>${svgIcon("help")} HYY EARN Support</h2>
+    <p>Need help? Contact our support team on Telegram.</p>
+    <a class="btn" href="https://t.me/Hyyearnsupport" target="_blank" rel="noopener noreferrer" style="display:flex;align-items:center;justify-content:center;gap:9px;text-decoration:none">
+      <svg class="icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21.7 4.3a1.5 1.5 0 0 0-1.6-.25L3.1 10.7a1.5 1.5 0 0 0 .15 2.83l4.3 1.4 1.6 5.05a1.5 1.5 0 0 0 2.55.55l2.45-2.55 4.2 3.1a1.5 1.5 0 0 0 2.35-.9l2.3-14.2a1.5 1.5 0 0 0-1.3-1.68ZM9 14.3l8.45-7.05-6.8 8.35-.35 3.1L9 14.3Z"/></svg>
+      Contact Us on Telegram
+    </a>
+    <p class="muted" style="margin-top:12px">Telegram: @Hyyearnsupport</p>
   </div>`);
 }
 
