@@ -45,6 +45,8 @@ hr{border:0;border-top:1px solid #eee;margin:14px 0}
 .menu{position:absolute;right:15px;top:60px;background:white;color:#321064;padding:12px;border-radius:12px;box-shadow:0 5px 20px #0002;min-width:180px}
 .menu button{display:block;width:100%;text-align:left;padding:10px;background:white;color:#321064}
 .task{border:1px solid #eee5ff}
+.app-icon{width:58px;height:58px;border-radius:14px;object-fit:cover;background:#eee5ff;flex:0 0 auto}
+.app-card{display:flex;align-items:center;gap:13px}.app-card h3{margin:0 0 5px}
 .center{text-align:center;padding:35px 10px}
 .ref-code{font-size:23px;font-weight:bold;letter-spacing:2px;background:#f5eaff;padding:14px;border-radius:12px;text-align:center;overflow-wrap:anywhere}
 .stat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
@@ -113,6 +115,7 @@ let isAdmin=false;
 let adminVerified=false;
 let currentPage="home";
 let cachedTasks=[];
+let cachedApps=[];
 let cachedSubmissions=[];
 let cachedWithdrawals=[];
 let myReferralCode="";
@@ -312,28 +315,40 @@ async function dailyCheckin(){
 function comingSoon(){showMessage("Coming Soon!");}
 
 async function renderTasks(){
-  setPage(`<h2>Available Tasks ${svgIcon("clipboard")}</h2><p class="muted">Loading tasks...</p>`);
-  const {data,error}=await db.from("tasks")
-    .select("*")
-    .eq("status","published")
-    .order("created_at",{ascending:false});
-  if(error){
-    setPage(`<div class="card">Unable to load tasks: ${safe(error.message)}</div>`);
-    return;
+  setPage(`<h2>Available Tasks ${svgIcon("clipboard")}</h2><p class="muted">Loading tasks and apps...</p>`);
+  const [{data:tasks,error:taskError},{data:apps,error:appError}]=await Promise.all([
+    db.from("tasks").select("*").eq("status","published").order("created_at",{ascending:false}),
+    db.from("sponsored_apps").select("id,app_name,description,icon_path,install_url").eq("status","published").order("created_at",{ascending:false})
+  ]);
+  if(taskError||appError){setPage(`<div class="card">Unable to load tasks: ${safe((taskError||appError).message)}</div>`);return;}
+  cachedTasks=tasks||[]; cachedApps=apps||[];
+  let html=`<h2>Available Tasks ${svgIcon("clipboard")}</h2><p class="muted">Explore sponsored apps and other tasks.</p>`;
+  if(cachedApps.length){
+    html+=`<h3>Featured Apps</h3>`;
+    for(const a of cachedApps){
+      const iconUrl=a.icon_path?db.storage.from("app-icons").getPublicUrl(a.icon_path).data.publicUrl:"";
+      html+=`<div class="card app-card" onclick="openSponsoredApp('${safe(a.id)}')" style="cursor:pointer">
+        ${iconUrl?`<img class="app-icon" src="${safe(iconUrl)}" alt="${safe(a.app_name)} icon">`:`<div class="app-icon" style="display:grid;place-items:center;font-size:25px">📱</div>`}
+        <div style="flex:1;min-width:0"><h3>${safe(a.app_name)}</h3><p class="muted">${safe(a.description||"Sponsored app")}</p><span class="pill">View app tasks →</span></div></div>`;
+    }
   }
-  cachedTasks=data||[];
-  let html=`<h2>Available Tasks ${svgIcon("clipboard")}</h2>
-    <p class="muted">Choose a task to view its details.</p>`;
-  if(!cachedTasks.length)html+=`<div class="card center">No published tasks right now.</div>`;
-  for(const task of cachedTasks){
-    html+=`
-      <div class="card task">
-        <div class="row"><span class="pill">${safe(task.category||"Task")}</span>
-        <b>${money(task.reward_paise)}</b></div>
-        <h3>${safe(task.title)}</h3>
-        <p class="muted">${safe(task.description||"")}</p>
-        <button class="btn" onclick="openTask('${safe(task.id)}')">View Task</button>
-      </div>`;
+  const otherTasks=cachedTasks.filter(t=>t.category!=="App"&&!t.app_id);
+  html+=`<h3>Other Tasks</h3>`;
+  if(!otherTasks.length)html+=`<div class="card center">No other tasks right now.</div>`;
+  for(const task of otherTasks){html+=`<div class="card task"><div class="row"><span class="pill">${safe(task.category||"Task")}</span><b>${money(task.reward_paise)}</b></div><h3>${safe(task.title)}</h3><p class="muted">${safe(task.description||"")}</p><button class="btn" onclick="openTask('${safe(task.id)}')">View Task</button></div>`;}
+  setPage(html);
+}
+async function openSponsoredApp(appId){
+  const a=cachedApps.find(x=>String(x.id)===String(appId)); if(!a)return;
+  const {data:tasks,error}=await db.from("tasks").select("*").eq("app_id",appId).eq("status","published").order("created_at",{ascending:false});
+  if(error){showMessage(error.message);return;}
+  cachedTasks=(cachedTasks||[]).filter(t=>String(t.app_id)!==String(appId)).concat(tasks||[]);
+  const iconUrl=a.icon_path?db.storage.from("app-icons").getPublicUrl(a.icon_path).data.publicUrl:"";
+  let html=`<button class="btn light" onclick="renderTasks()">← Back to Tasks</button><div class="card">${iconUrl?`<img class="app-icon" src="${safe(iconUrl)}" alt="App icon">`:`<div class="app-icon" style="display:grid;place-items:center">📱</div>`}<h2>${safe(a.app_name)}</h2><p>${safe(a.description||"")}</p>${a.install_url?`<a class="btn" href="${safe(a.install_url)}" target="_blank" rel="noopener">Open official app page ↗</a>`:""}</div><h3>Tasks for ${safe(a.app_name)}</h3>`;
+  if(!tasks?.length)html+=`<div class="card center">No tasks available for this app yet.</div>`;
+  for(const t of tasks||[]){
+    const {data:sub}=await db.from("task_submissions").select("status").eq("task_id",t.id).eq("user_id",currentUser.id).maybeSingle();
+    html+=`<div class="card task"><div class="row"><span class="pill">App Task</span><b>${money(t.reward_paise)}</b></div><h3>${safe(t.title)}</h3><p>${safe(t.description||"")}</p>${t.task_url?`<a href="${safe(t.task_url)}" target="_blank" rel="noopener">Open task instructions ↗</a><br>`:""}${sub?`<p class="status ${safe(sub.status)}">Your submission: ${safe(sub.status)}</p>`:`<button class="btn" onclick="openProof('${safe(t.id)}')">Complete & Submit Proof</button>`}</div>`;
   }
   setPage(html);
 }
@@ -763,6 +778,7 @@ function showAdminDashboard(){
       <p class="muted">Manage your platform from here.</p>
       <button class="btn" onclick="renderCreateTaskPage()">＋ Create Tasks</button>
       <button class="btn light" onclick="renderAdminTasks()">Your Tasks</button>
+      <button class="btn light" onclick="renderManageApps()">📱 Manage App Promotions</button>
       <button class="btn light" onclick="renderApprovalsPage()">Task Approvals</button>
       <button class="btn light" onclick="renderAdminWithdrawals()">Withdrawals</button>
       <button class="btn light" onclick="renderAdminReferrals()">Referral Management</button>
@@ -771,7 +787,7 @@ function showAdminDashboard(){
     </div>
   `);
 }
-function renderCreateTaskPage(){
+async function renderCreateTaskPage(){
   if(!requireAdmin())return;
   adminShell(`
     <div class="card">
@@ -783,8 +799,9 @@ function renderCreateTaskPage(){
       <label>Category</label>
       <select id="newTaskCategory">
         <option>Survey</option><option>Social Media</option>
-        <option>Website</option><option>Other</option>
+        <option>Website</option><option>App</option><option>Other</option>
       </select>
+      <div id="appTaskPicker" class="hidden"><label>Sponsored App</label><select id="newTaskApp"></select></div>
       <label>Reward Amount (₹)</label>
       <input id="newTaskReward" type="number" min="1" placeholder="Enter reward">
       <label>Task Link (optional)</label>
@@ -794,6 +811,21 @@ function renderCreateTaskPage(){
       <button class="btn light" onclick="showAdminDashboard()">Cancel</button>
     </div>
   `);
+  const categorySelect=document.getElementById("newTaskCategory");
+  categorySelect.addEventListener("change",toggleAppTaskPicker);
+  await fillAppTaskPicker();
+}
+async function fillAppTaskPicker(selectedId=""){
+  const box=document.getElementById("appTaskPicker"); const select=document.getElementById("newTaskApp");
+  if(!box||!select)return;
+  const {data,error}=await db.from("sponsored_apps").select("id,app_name").order("app_name");
+  if(error){showMessage(error.message);return;}
+  select.innerHTML=(data||[]).map(a=>`<option value="${safe(a.id)}" ${String(a.id)===String(selectedId)?"selected":""}>${safe(a.app_name)}</option>`).join("");
+  toggleAppTaskPicker();
+}
+function toggleAppTaskPicker(){
+  const box=document.getElementById("appTaskPicker"); const category=document.getElementById("newTaskCategory");
+  if(box&&category)box.classList.toggle("hidden",category.value!=="App");
 }
 async function saveNewTask(status){
   if(!requireAdmin())return;
@@ -802,6 +834,8 @@ async function saveNewTask(status){
   const category=document.getElementById("newTaskCategory").value;
   const reward=Number(document.getElementById("newTaskReward").value);
   const taskUrl=document.getElementById("newTaskLink").value.trim();
+  const appId=category==="App"?(document.getElementById("newTaskApp")?.value||""):null;
+  if(category==="App"&&!appId){showMessage("Create or select a sponsored app first.");return;}
   if(!title||!description||!Number.isFinite(reward)||reward<=0){
     showMessage("Please fill title, description and a valid reward.");return;
   }
@@ -811,11 +845,61 @@ async function saveNewTask(status){
   const {error}=await db.from("tasks").insert({
     title,description,category,
     reward_paise:Math.round(reward*100),
-    task_url:taskUrl||null,status
+    task_url:taskUrl||null,status,app_id:appId||null
   });
   if(error){showMessage(error.message);return;}
   showMessage(status==="published"?"Task published!":"Task saved as draft!");
   renderAdminTasks();
+}
+async function renderManageApps(){
+  if(!requireAdmin())return;
+  adminShell(`<div class="card"><h3>Manage App Promotions</h3><p class="muted">Add sponsor app details and upload its icon from your device.</p>
+    <label>App Name</label><input id="sponsorAppName" placeholder="Enter app name">
+    <label>App Description</label><textarea id="sponsorAppDescription" placeholder="Describe the app"></textarea>
+    <label>Official App Page (optional)</label><input id="sponsorAppUrl" type="url" placeholder="https://play.google.com/store/apps/...">
+    <label>App Icon (JPG, PNG, WebP · max 2 MB)</label><input id="sponsorAppIcon" type="file" accept="image/jpeg,image/png,image/webp">
+    <button class="btn" onclick="saveSponsoredApp()">Upload & Publish App</button>
+    <button class="btn light" onclick="showAdminDashboard()">Back</button></div><div id="sponsoredAppList" class="card">Loading apps...</div>`);
+  const {data,error}=await db.from("sponsored_apps").select("*").order("created_at",{ascending:false});
+  const list=document.getElementById("sponsoredAppList"); if(!list)return;
+  if(error){list.innerHTML=`Unable to load apps: ${safe(error.message)}`;return;}
+  let html="<h3>Your Sponsored Apps</h3>";
+  if(!data?.length)html+="<p>No apps added yet.</p>";
+  for(const a of data||[]){html+=`<hr><b>${safe(a.app_name)}</b> <span class="pill">${safe(a.status)}</span><p class="muted">${safe(a.description||"")}</p><button class="btn small light" onclick="toggleSponsoredApp('${safe(a.id)}','${safe(a.status)}')">${a.status==="published"?"Pause":"Publish"}</button><button class="btn small red" onclick="deleteSponsoredApp('${safe(a.id)}','${safe(a.icon_path||"")}')">Delete</button>`;}
+  list.innerHTML=html;
+}
+async function saveSponsoredApp(){
+  if(!requireAdmin())return;
+  const name=document.getElementById("sponsorAppName").value.trim();
+  const description=document.getElementById("sponsorAppDescription").value.trim();
+  const url=document.getElementById("sponsorAppUrl").value.trim();
+  const file=document.getElementById("sponsorAppIcon").files[0];
+  if(!name||!description||!file){showMessage("Enter app name, description and choose an icon.");return;}
+  if(url&&!/^https:\/\//i.test(url)){showMessage("Use a secure https:// app page link.");return;}
+  if(file.size>2*1024*1024||!["image/jpeg","image/png","image/webp"].includes(file.type)){showMessage("Choose JPG, PNG or WebP under 2 MB.");return;}
+  const ext=file.type==="image/png"?"png":file.type==="image/webp"?"webp":"jpg";
+  const path=`${currentUser.id}/${crypto.randomUUID()}.${ext}`;
+  const {error:upErr}=await db.storage.from("app-icons").upload(path,file,{contentType:file.type,upsert:false});
+  if(upErr){showMessage(upErr.message);return;}
+  const {error}=await db.from("sponsored_apps").insert({app_name:name,description,install_url:url||null,icon_path:path,status:"published"});
+  if(error){await db.storage.from("app-icons").remove([path]);showMessage(error.message);return;}
+  showMessage("App promotion published!");renderManageApps();
+}
+async function toggleSponsoredApp(id,status){
+  if(!requireAdmin())return;
+  const {error}=await db.from("sponsored_apps").update({status:status==="published"?"paused":"published"}).eq("id",id);
+  if(error){showMessage(error.message);return;}renderManageApps();
+}
+async function deleteSponsoredApp(id,path){
+  if(!requireAdmin())return;
+  const {count,error:countError}=await db.from("tasks").select("id",{count:"exact",head:true}).eq("app_id",id);
+  if(countError){showMessage(countError.message);return;}
+  if(count>0){showMessage("Delete or reassign this app's tasks first.");return;}
+  if(!confirm("Delete this app promotion?"))return;
+  const {error}=await db.from("sponsored_apps").delete().eq("id",id);
+  if(error){showMessage(error.message);return;}
+  if(path)await db.storage.from("app-icons").remove([path]);
+  showMessage("App promotion deleted.");renderManageApps();
 }
 async function renderAdminTasks(){
   if(!requireAdmin())return;
@@ -831,7 +915,7 @@ async function renderAdminTasks(){
   for(const t of data||[]){
     html+=`
       <hr><div class="row"><b>${safe(t.title)}</b><span class="pill">${safe(t.status)}</span></div>
-      <p class="muted">${safe(t.category||"Task")} · ${money(t.reward_paise)}</p>
+      <p class="muted">${safe(t.category||"Task")} · ${money(t.reward_paise)}${t.app_id?" · App-linked":""}</p>
       <button class="btn small light" onclick="editTask('${safe(t.id)}')">Edit</button>
       <button class="btn small light" onclick="toggleTask('${safe(t.id)}','${safe(t.status)}')">${t.status==="published"?"Pause":"Activate"}</button>
       <button class="btn small red" onclick="deleteTask('${safe(t.id)}')">Delete</button>`;
