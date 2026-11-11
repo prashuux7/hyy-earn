@@ -315,7 +315,7 @@ async function renderTasks(){
   setPage(`<h2>Available Tasks ${svgIcon("clipboard")}</h2><p class="muted">Loading tasks...</p>`);
   const {data,error}=await db.from("tasks")
     .select("*")
-    .eq("status","active")
+    .eq("status","published")
     .order("created_at",{ascending:false});
   if(error){
     setPage(`<div class="card">Unable to load tasks: ${safe(error.message)}</div>`);
@@ -324,7 +324,7 @@ async function renderTasks(){
   cachedTasks=data||[];
   let html=`<h2>Available Tasks ${svgIcon("clipboard")}</h2>
     <p class="muted">Choose a task to view its details.</p>`;
-  if(!cachedTasks.length)html+=`<div class="card center">No active tasks right now.</div>`;
+  if(!cachedTasks.length)html+=`<div class="card center">No published tasks right now.</div>`;
   for(const task of cachedTasks){
     html+=`
       <div class="card task">
@@ -789,7 +789,7 @@ function renderCreateTaskPage(){
       <input id="newTaskReward" type="number" min="1" placeholder="Enter reward">
       <label>Task Link (optional)</label>
       <input id="newTaskLink" type="url" placeholder="https://...">
-      <button class="btn" onclick="saveNewTask('active')">Publish Task</button>
+      <button class="btn" onclick="saveNewTask('published')">Publish Task</button>
       <button class="btn light" onclick="saveNewTask('draft')">Save as Draft</button>
       <button class="btn light" onclick="showAdminDashboard()">Cancel</button>
     </div>
@@ -814,7 +814,7 @@ async function saveNewTask(status){
     task_url:taskUrl||null,status
   });
   if(error){showMessage(error.message);return;}
-  showMessage(status==="active"?"Task published!":"Task saved as draft!");
+  showMessage(status==="published"?"Task published!":"Task saved as draft!");
   renderAdminTasks();
 }
 async function renderAdminTasks(){
@@ -833,7 +833,7 @@ async function renderAdminTasks(){
       <hr><div class="row"><b>${safe(t.title)}</b><span class="pill">${safe(t.status)}</span></div>
       <p class="muted">${safe(t.category||"Task")} · ${money(t.reward_paise)}</p>
       <button class="btn small light" onclick="editTask('${safe(t.id)}')">Edit</button>
-      <button class="btn small light" onclick="toggleTask('${safe(t.id)}','${safe(t.status)}')">${t.status==="active"?"Pause":"Activate"}</button>
+      <button class="btn small light" onclick="toggleTask('${safe(t.id)}','${safe(t.status)}')">${t.status==="published"?"Pause":"Activate"}</button>
       <button class="btn small red" onclick="deleteTask('${safe(t.id)}')">Delete</button>`;
   }
   html+=`</div>`;
@@ -880,7 +880,7 @@ async function updateTask(taskId){
 }
 async function toggleTask(taskId,status){
   if(!requireAdmin())return;
-  const next=status==="active"?"paused":"active";
+  const next=status==="published"?"paused":"published";
   const {error}=await db.from("tasks").update({status:next}).eq("id",taskId);
   if(error){showMessage(error.message);return;}
   renderAdminTasks();
