@@ -51,13 +51,17 @@ hr{border:0;border-top:1px solid #eee;margin:14px 0}
 .stat-box{background:#f8f4ff;padding:14px;border-radius:12px}
 .stat-box b{font-size:22px;display:block;margin-top:5px}
 .rule-list{padding-left:20px;line-height:1.7;font-size:14px}
+.icon{width:20px;height:20px;display:inline-block;vertical-align:middle;flex:0 0 auto}
+.brand-icon{display:inline-flex;vertical-align:middle;margin-right:5px}
+.admin-actions{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 14px}
+.admin-actions .btn{flex:1;min-width:145px}
 </style>
 </head>
 <body>
 
 <header>
-  <h2>💜 HYY EARN</h2>
-  <button onclick="toggleMenu()" style="background:transparent;color:white;font-size:23px">☰</button>
+  <h2><span class="brand-icon" id="brandIcon"></span> HYY EARN</h2>
+  <button onclick="toggleMenu()" style="background:transparent;color:white;font-size:23px" aria-label="Open menu"><span id="menuIcon"></span></button>
   <div id="profileMenu" class="menu hidden">
     <div id="menuUsername" style="padding:8px;font-weight:bold"></div>
     <button onclick="openPage('profile')">My Profile</button>
@@ -72,12 +76,12 @@ hr{border:0;border-top:1px solid #eee;margin:14px 0}
 </div>
 
 <nav id="bottomNav" class="nav hidden">
-  <button data-page="home" onclick="openPage('home')"><span>🏠</span>Home</button>
-  <button data-page="task" onclick="openPage('task')"><span>📋</span>Task</button>
-  <button data-page="refer" onclick="openPage('refer')"><span>🎁</span>Refer</button>
-  <button data-page="community" onclick="openPage('community')"><span>👥</span>Community</button>
-  <button data-page="wallet" onclick="openPage('wallet')"><span>💰</span>Wallet</button>
-  <button data-page="profile" onclick="openPage('profile')"><span>👤</span>Profile</button>
+  <button data-page="home" onclick="openPage('home')"><span class="nav-icon" data-icon="home"></span>Home</button>
+  <button data-page="task" onclick="openPage('task')"><span class="nav-icon" data-icon="clipboard"></span>Task</button>
+  <button data-page="refer" onclick="openPage('refer')"><span class="nav-icon" data-icon="gift"></span>Refer</button>
+  <button data-page="community" onclick="openPage('community')"><span class="nav-icon" data-icon="users"></span>Community</button>
+  <button data-page="wallet" onclick="openPage('wallet')"><span class="nav-icon" data-icon="wallet"></span>Wallet</button>
+  <button data-page="profile" onclick="openPage('profile')"><span class="nav-icon" data-icon="user"></span>Profile</button>
 </nav>
 
 <div id="modalRoot"></div>
@@ -124,6 +128,33 @@ function safe(value){
   return String(value??"").replace(/[&<>"']/g,c=>({
     "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
   }[c]));
+}
+function svgIcon(name){
+  const paths={
+    heart:'<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z"/>',
+    menu:'<path d="M4 6h16M4 12h16M4 18h16"/>',
+    home:'<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z"/>',
+    clipboard:'<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4.5h6M9 10h6M9 14h6M9 18h3"/>',
+    gift:'<rect x="3" y="9" width="18" height="12" rx="2"/><path d="M12 9v12M2 6h20v3H2zM12 6H8.5a2.5 2.5 0 1 1 2.5-2.5V6Zm0 0h3.5A2.5 2.5 0 1 0 13 3.5V6Z"/>',
+    users:'<path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M10 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm7-7.8a4 4 0 0 1 0 7.6M20 21v-2a4 4 0 0 0-3-3.9"/>',
+    wallet:'<rect x="3" y="5" width="18" height="15" rx="2"/><path d="M3 9h18M16 14h2"/>',
+    user:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+    hand:'<path d="M8 12V5a2 2 0 0 1 4 0v6-2a2 2 0 0 1 4 0v3-1a2 2 0 0 1 4 0v5a6 6 0 0 1-6 6h-2a6 6 0 0 1-5-3l-3-4a2 2 0 0 1 3-3l1 1Z"/>',
+    gamepad:'<path d="M6 11h4m-2-2v4m8-3h.01M18 12h.01M7 7h10a4 4 0 0 1 3.9 3.1l1 5A3 3 0 0 1 17 18l-3-3h-4l-3 3a3 3 0 0 1-4.9-2.9l1-5A4 4 0 0 1 7 7Z"/>',
+    file:'<path d="M6 3h8l4 4v14H6zM14 3v5h5M9 13h6M9 17h6"/>',
+    bell:'<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/>',
+    shield:'<path d="M12 22s8-4 8-11V5l-8-3-8 3v6c0 7 8 11 8 11Z"/><path d="m9 12 2 2 4-4"/>',
+    fileText:'<path d="M6 3h8l4 4v14H6zM14 3v5h5M9 13h6M9 17h6"/>',
+    help:'<circle cx="12" cy="12" r="9"/><path d="M9.6 9a2.5 2.5 0 1 1 4.3 1.7c-1.1 1-1.9 1.3-1.9 2.8M12 17h.01"/>'
+  };
+  return `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name]||paths.file}</svg>`;
+}
+function initIcons(){
+  const brand=document.getElementById("brandIcon");
+  const menu=document.getElementById("menuIcon");
+  if(brand)brand.innerHTML=svgIcon("heart");
+  if(menu)menu.innerHTML=svgIcon("menu");
+  document.querySelectorAll(".nav-icon").forEach(el=>el.innerHTML=svgIcon(el.dataset.icon));
 }
 function showMessage(message){alert(message);}
 function toggleMenu(){
@@ -183,7 +214,9 @@ async function processPendingReferral(){
 }
 
 async function startApp(){
+  initIcons();
   const {data:{session}}=await db.auth.getSession();
+  initIcons();
   if(!session){showLogin();return;}
   currentUser=session.user;
   await refreshAccount();
@@ -196,7 +229,7 @@ function showLogin(){
   document.getElementById("profileMenu").classList.add("hidden");
   setPage(`
     <div class="card center">
-      <h1>💜 HYY EARN</h1>
+      <h1>${svgIcon("heart")} HYY EARN</h1>
       <p>Welcome! Login to continue.</p>
       <button class="btn" onclick="googleLogin()">Continue with Google</button>
       <p class="muted">heyy earn platform</p>
@@ -235,7 +268,7 @@ async function renderHome(){
   await getWallet();
   setPage(`
     <div class="card hero">
-      <p>Welcome back 👋</p>
+      <p>Welcome back ${svgIcon("hand")}</p>
       <h2>${safe(username)}</h2>
       <p>Your wallet balance</p>
       <div class="big">${money(walletBalance)}</div>
@@ -243,17 +276,17 @@ async function renderHome(){
     </div>
 
     <div class="card">
-      <div class="row"><h3>Daily Check-in 🎁</h3><span class="pill">Daily</span></div>
+      <div class="row"><h3>Daily Check-in ${svgIcon("gift")}</h3><span class="pill">Daily</span></div>
       <p class="muted">Check in and see whether today's reward is available.</p>
       <button class="btn" onclick="dailyCheckin()">Daily Check-in</button>
     </div>
 
     <h3>Earn More</h3>
     <div class="grid">
-      <div class="tile" onclick="openPage('task')">📋<br>Tasks</div>
-      <div class="tile" onclick="comingSoon()">📝<br>Surveys</div>
-      <div class="tile" onclick="comingSoon()">🎮<br>Games</div>
-      <div class="tile" onclick="comingSoon()">🎁<br>Rewards</div>
+      <div class="tile" onclick="openPage('task')">${svgIcon("clipboard")}<br>Tasks</div>
+      <div class="tile" onclick="comingSoon()">${svgIcon("file")}<br>Surveys</div>
+      <div class="tile" onclick="comingSoon()">${svgIcon("gamepad")}<br>Games</div>
+      <div class="tile" onclick="comingSoon()">${svgIcon("gift")}<br>Rewards</div>
     </div>
 
     <div class="card">
@@ -263,7 +296,7 @@ async function renderHome(){
     </div>
 
     <div class="card">
-      <h3>Refer & Earn 💜</h3>
+      <h3>Refer & Earn ${svgIcon("heart")}</h3>
       <p class="muted">Invite friends. Earn ₹10 when their first task is approved.</p>
       <button class="btn" onclick="openPage('refer')">Invite Friends</button>
     </div>
@@ -279,7 +312,7 @@ async function dailyCheckin(){
 function comingSoon(){showMessage("Coming Soon!");}
 
 async function renderTasks(){
-  setPage(`<h2>Available Tasks 📋</h2><p class="muted">Loading tasks...</p>`);
+  setPage(`<h2>Available Tasks ${svgIcon("clipboard")}</h2><p class="muted">Loading tasks...</p>`);
   const {data,error}=await db.from("tasks")
     .select("*")
     .eq("status","active")
@@ -289,7 +322,7 @@ async function renderTasks(){
     return;
   }
   cachedTasks=data||[];
-  let html=`<h2>Available Tasks 📋</h2>
+  let html=`<h2>Available Tasks ${svgIcon("clipboard")}</h2>
     <p class="muted">Choose a task to view its details.</p>`;
   if(!cachedTasks.length)html+=`<div class="card center">No active tasks right now.</div>`;
   for(const task of cachedTasks){
@@ -379,7 +412,7 @@ async function submitProof(taskId){
 
 // REFER & EARN
 async function renderReferPage(){
-  setPage(`<div class="card center"><h2>🎁 Refer & Earn</h2><p>Loading your referral details...</p></div>`);
+  setPage(`<div class="card center"><h2>${svgIcon("gift")} Refer & Earn</h2><p>Loading your referral details...</p></div>`);
 
   const [codeResult,statsResult]=await Promise.all([
     db.rpc("get_my_referral_code"),
@@ -389,7 +422,7 @@ async function renderReferPage(){
   if(codeResult.error){
     setPage(`
       <div class="card">
-        <h2>🎁 Refer & Earn</h2>
+        <h2>${svgIcon("gift")} Refer & Earn</h2>
         <p>Unable to load referral code.</p>
         <p class="muted">${safe(codeResult.error.message)}</p>
         <button class="btn light" onclick="openPage('home')">Back Home</button>
@@ -412,7 +445,7 @@ async function renderReferPage(){
     <button class="btn light" onclick="openPage('home')">← Back Home</button>
 
     <div class="card hero center">
-      <div style="font-size:42px">🎁</div>
+      <div style="font-size:42px">${svgIcon("gift")}</div>
       <h2>Refer Friends & Earn ₹10</h2>
       <p>Invite your friends to HYY EARN.</p>
       <div class="big">₹10</div>
@@ -509,7 +542,7 @@ async function shareReferral(){
 function renderCommunity(){
   setPage(`
     <div class="card center">
-      <div style="font-size:45px">👥</div>
+      <div style="font-size:45px">${svgIcon("users")}</div>
       <h2>Community</h2>
       <p class="muted">Community features are coming soon.</p>
     </div>
@@ -519,7 +552,7 @@ async function renderWallet(){
   await getWallet();
   setPage(`
     <div class="card hero">
-      <p>My Wallet 💰</p>
+      <p>My Wallet ${svgIcon("wallet")}</p>
       <div class="big">${money(walletBalance)}</div>
       <p>Available balance</p>
     </div>
@@ -589,17 +622,96 @@ async function renderWithdrawalHistory(){
 function renderProfile(){
   setPage(`
     <div class="card center">
-      <div style="font-size:45px">👤</div>
+      <div style="font-size:45px">${svgIcon("user")}</div>
       <h2>${safe(username)}</h2>
       <p class="muted">${safe(currentUser.email||"")}</p>
     </div>
     <div class="card">
       <button class="btn light" onclick="openPage('wallet')">My Wallet</button>
-      <button class="btn light" onclick="openPage('refer')">🎁 Refer & Earn</button>
+      <button class="btn light" onclick="openPage('refer')">${svgIcon("gift")} Refer & Earn</button>
+      <button class="btn light" onclick="renderNotificationsPage()">${svgIcon("bell")} Notifications</button>
+      <button class="btn light" onclick="renderPrivacyPage()">${svgIcon("shield")} Privacy Policy</button>
+      <button class="btn light" onclick="renderTermsPage()">${svgIcon("fileText")} Terms & Conditions</button>
+      <button class="btn light" onclick="renderSupportPage()">${svgIcon("help")} Support</button>
       ${isAdmin?`<button class="btn" onclick="adminLogin()">Admin Dashboard</button>`:""}
       <button class="btn red" onclick="logout()">Logout</button>
     </div>
   `);
+}
+
+async function renderNotificationsPage(){
+  setPage(`<div class="card"><h2>${svgIcon("bell")} Notifications</h2><p class="muted">Loading announcements...</p></div>`);
+  const {data,error}=await db.from("notifications").select("id,title,message,created_at").eq("is_published",true).order("created_at",{ascending:false}).limit(50);
+  if(error){setPage(`<div class="card"><h2>Notifications</h2><p>Notifications are not configured yet.</p><p class="muted">${safe(error.message)}</p></div>`);return;}
+  let html=`<button class="btn light" onclick="openPage('profile')">← Profile</button><div class="card"><h2>${svgIcon("bell")} Notifications</h2>`;
+  if(!data?.length)html+=`<p class="muted">No announcements yet.</p>`;
+  for(const n of data||[])html+=`<hr><h3>${safe(n.title)}</h3><p>${safe(n.message)}</p><p class="muted">${new Date(n.created_at).toLocaleString()}</p>`;
+  html+=`</div>`;setPage(html);
+}
+async function renderAdminNotifications(){
+  if(!requireAdmin())return;
+  adminShell(`<div class="card"><h3>Notifications</h3><p>Loading...</p></div>`);
+  const {data,error}=await db.from("notifications").select("id,title,message,is_published,created_at").order("created_at",{ascending:false}).limit(100);
+  if(error){adminShell(`<div class="card"><h3>Notifications</h3><p class="muted">Notifications SQL setup is required.</p><p>${safe(error.message)}</p></div>`);return;}
+  let html=`<div class="card"><h3>Create Announcement</h3>
+    <label>Title</label><input id="noticeTitle" maxlength="100" placeholder="Announcement title">
+    <label>Message</label><textarea id="noticeMessage" maxlength="2000" placeholder="Write an update for users"></textarea>
+    <button class="btn" onclick="publishNotification()">Publish</button></div>
+    <div class="card"><h3>Previous Announcements</h3>`;
+  if(!data?.length)html+=`<p>No announcements created.</p>`;
+  for(const n of data||[])html+=`<hr><b>${safe(n.title)}</b><p>${safe(n.message)}</p><p class="muted">${n.is_published?"Published":"Draft"} · ${new Date(n.created_at).toLocaleString()}</p>
+    <button class="btn small light" onclick="toggleNotification('${safe(n.id)}',${!n.is_published})">${n.is_published?"Unpublish":"Publish"}</button>
+    <button class="btn small red" onclick="deleteNotification('${safe(n.id)}')">Delete</button>`;
+  html+=`</div>`;adminShell(html);
+}
+async function publishNotification(){
+  if(!requireAdmin())return;
+  const title=document.getElementById("noticeTitle").value.trim();
+  const message=document.getElementById("noticeMessage").value.trim();
+  if(!title||!message){showMessage("Enter a title and message.");return;}
+  const {error}=await db.from("notifications").insert({title,message,is_published:true});
+  if(error){showMessage(error.message);return;}
+  showMessage("Announcement published.");renderAdminNotifications();
+}
+async function toggleNotification(id,published){
+  if(!requireAdmin())return;
+  const {error}=await db.from("notifications").update({is_published:published}).eq("id",id);
+  if(error){showMessage(error.message);return;}renderAdminNotifications();
+}
+async function deleteNotification(id){
+  if(!requireAdmin()||!confirm("Delete this announcement?"))return;
+  const {error}=await db.from("notifications").delete().eq("id",id);
+  if(error){showMessage(error.message);return;}renderAdminNotifications();
+}
+function renderPrivacyPage(){
+  setPage(`<button class="btn light" onclick="openPage('profile')">← Profile</button><div class="card">
+    <h2>${svgIcon("shield")} Privacy Policy</h2>
+    <p class="muted">Demo policy — review and replace with your final legal policy before public launch.</p>
+    <h3>Information we use</h3><p>HYY EARN may use your account identifier, username, task submissions, referral activity and wallet request details to operate the demo platform.</p>
+    <h3>How information is used</h3><p>Information is used to sign you in, review task submissions, calculate demo rewards, prevent duplicate or abusive activity and respond to support requests.</p>
+    <h3>Payments and security</h3><p>Wallet balances and withdrawal requests are records in the platform. A request does not mean money has been transferred. Do not submit passwords, bank PINs, OTPs or other secret credentials.</p>
+    <h3>Data and contact</h3><p>Before launch, publish a verified operator identity, contact address, retention/deletion process and applicable grievance contact here.</p>
+  </div>`);
+}
+function renderTermsPage(){
+  setPage(`<button class="btn light" onclick="openPage('profile')">← Profile</button><div class="card">
+    <h2>${svgIcon("fileText")} Terms & Conditions</h2>
+    <p class="muted">Draft demo terms — obtain appropriate legal review before public launch.</p>
+    <h3>Platform status</h3><p>HYY EARN is currently a demonstration project. Tasks, rewards and wallet balances must not be represented as guaranteed income.</p>
+    <h3>Task reviews</h3><p>Task submissions may be reviewed and approved or rejected according to the published task requirements. Duplicate, misleading or fraudulent submissions may be rejected.</p>
+    <h3>Referrals</h3><p>Referral rewards are subject to the stated eligibility rules, review and anti-abuse checks. Self-referrals and duplicate accounts are not eligible.</p>
+    <h3>Withdrawals</h3><p>Withdrawal requests are manually reviewed. A displayed balance or submitted request is not a promise of payment. Do not submit a request unless the platform's operator has published verified payout terms.</p>
+    <h3>Eligibility and changes</h3><p>Use of the service must comply with applicable laws and age requirements. A parent or guardian should be involved where required. Final operator details, eligibility rules, dispute process and effective date must be added before launch.</p>
+  </div>`);
+}
+function renderSupportPage(){
+  setPage(`<button class="btn light" onclick="openPage('profile')">← Profile</button><div class="card">
+    <h2>${svgIcon("help")} Support</h2><p>For help with login, task reviews, referrals or wallet records, share the details below with the platform operator through an official support channel.</p>
+    <label>Your account email</label><input value="${safe(currentUser?.email||"")}" readonly>
+    <label>Your account ID</label><input id="supportUserId" value="${safe(currentUser?.id||"")}" readonly>
+    <button class="btn light" onclick="navigator.clipboard?.writeText(document.getElementById('supportUserId').value).then(()=>showMessage('Account ID copied.')).catch(()=>showMessage('Copy the account ID manually.'))">Copy Account ID</button>
+    <p class="muted">The operator must add and verify an official support email/contact before public launch. Never share your password or OTP.</p>
+  </div>`);
 }
 
 async function adminLogin(){
@@ -630,7 +742,10 @@ function adminShell(content){
       <p>Admin Dashboard</p>
       <b>Welcome, ${safe(username)}</b>
     </div>
-    <button class="btn light" onclick="adminBack()">← User Dashboard</button>
+    <div class="admin-actions">
+      <button class="btn" onclick="showAdminDashboard()">${svgIcon("home")} Admin Dashboard</button>
+      <button class="btn light" onclick="adminBack()">${svgIcon("user")} User Dashboard</button>
+    </div>
     ${content}
   `);
 }
@@ -648,8 +763,9 @@ function showAdminDashboard(){
       <button class="btn light" onclick="renderAdminTasks()">Your Tasks</button>
       <button class="btn light" onclick="renderApprovalsPage()">Task Approvals</button>
       <button class="btn light" onclick="renderAdminWithdrawals()">Withdrawals</button>
+      <button class="btn light" onclick="renderAdminReferrals()">Referral Management</button>
       <button class="btn light" onclick="renderManageUsersPage()">Manage Users</button>
-      <button class="btn light" onclick="showMessage('Notifications coming soon!')">Notifications</button>
+      <button class="btn light" onclick="renderAdminNotifications()">${svgIcon("bell")} Notifications</button>
     </div>
   `);
 }
@@ -813,12 +929,98 @@ async function viewProof(path){
 async function reviewTask(submissionId,approved){
   if(!requireAdmin())return;
   const {error}=await db.rpc("review_submission",{
-    p_submission_id:submissionId,p_approved:approved
+    p_id:submissionId,p_approve:approved
   });
   if(error){showMessage(error.message);return;}
   showMessage(approved?"Submission approved.":"Submission rejected.");
   renderApprovalsPage();
 }
+async function renderAdminReferrals(){
+  if(!requireAdmin())return;
+  adminShell(`<div class="card"><h3>Referral Management</h3><p>Loading referrals...</p></div>`);
+
+  const {data,error}=await db.rpc("admin_list_referrals");
+  if(error){
+    adminShell(`
+      <div class="card">
+        <h3>Referral Management</h3>
+        <p>Unable to load referrals.</p>
+        <p class="muted">${safe(error.message)}</p>
+        <button class="btn light" onclick="showAdminDashboard()">← Admin Dashboard</button>
+      </div>`);
+    return;
+  }
+
+  const referrals=data||[];
+  const count=status=>referrals.filter(r=>r.status===status).length;
+  const completed=referrals.filter(r=>r.status==="completed");
+  const earned=completed.reduce((sum,r)=>sum+Number(r.reward_paise||0),0);
+
+  let html=`
+    <div class="card">
+      <div class="row">
+        <h3>Referral Management</h3>
+        <span class="pill">${referrals.length} total</span>
+      </div>
+      <div class="stat-grid">
+        <div class="stat-box"><span class="muted">Total Referrals</span><b>${referrals.length}</b></div>
+        <div class="stat-box"><span class="muted">Pending Review</span><b>${count("pending")}</b></div>
+        <div class="stat-box"><span class="muted">Approved</span><b>${count("approved")}</b></div>
+        <div class="stat-box"><span class="muted">Completed</span><b>${count("completed")}</b></div>
+        <div class="stat-box"><span class="muted">Rejected</span><b>${count("rejected")}</b></div>
+        <div class="stat-box"><span class="muted">Rewards Credited</span><b>${money(earned)}</b></div>
+      </div>
+      <p class="muted">Approve a valid referral. The ₹10 reward is credited only after the referred user also has an approved task.</p>
+      <button class="btn light" onclick="showAdminDashboard()">← Admin Dashboard</button>
+    </div>`;
+
+  if(!referrals.length){
+    html+=`<div class="card center"><p>No referrals found yet.</p></div>`;
+  }
+
+  for(const r of referrals){
+    const status=String(r.status||"pending");
+    const created=r.created_at?new Date(r.created_at).toLocaleString():"—";
+    const rewarded=r.rewarded_at?new Date(r.rewarded_at).toLocaleString():"Not credited";
+    html+=`
+      <div class="card">
+        <div class="row">
+          <b>${safe(r.referrer_username||"Referrer")}</b>
+          <span class="status ${safe(status)}">${safe(status)}</span>
+        </div>
+        <p class="muted">Invited user: ${safe(r.referred_username||"Unknown")}</p>
+        <p class="muted">Referral code: ${safe(r.referral_code||"—")}</p>
+        <p class="muted">Created: ${safe(created)}</p>
+        <p>Reward: <b>${money(r.reward_paise||1000)}</b></p>
+        ${status==="approved"?`<p class="muted">Waiting for the referred user's first approved task. Reward status: ${safe(rewarded)}</p>`:""}
+        ${status==="completed"?`<p class="status approved">Reward credited: ${safe(rewarded)}</p>`:""}
+        ${status==="pending"?`
+          <button class="btn small green" onclick="reviewReferral('${safe(r.referral_id)}',true)">Approve</button>
+          <button class="btn small red" onclick="reviewReferral('${safe(r.referral_id)}',false)">Reject</button>
+        `:""}
+      </div>`;
+  }
+
+  adminShell(html);
+}
+
+async function reviewReferral(referralId,approved){
+  if(!requireAdmin())return;
+  const action=approved?"approve this referral":"reject this referral";
+  if(!confirm("Are you sure you want to "+action+"?"))return;
+
+  const {error}=await db.rpc("review_referral",{
+    p_referral_id:referralId,
+    p_approved:approved
+  });
+  if(error){showMessage(error.message);return;}
+
+  showMessage(approved
+    ?"Referral approved. Reward will be credited after the referred user's first approved task."
+    :"Referral rejected.");
+  renderAdminReferrals();
+}
+
 async function renderAdminWithdrawals(){
   if(!requireAdmin())return;
   adminShell(`<div class="card"><h3>Withdrawals</h3><p>Loading...</p></div>`);
@@ -902,6 +1104,7 @@ db.auth.onAuthStateChange((event,session)=>{
   }
 });
 
+initIcons();
 startApp();
 </script>
 </body>
