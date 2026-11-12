@@ -58,6 +58,12 @@ hr{border:0;border-top:1px solid #eee;margin:14px 0}
 .brand-icon{display:inline-flex;vertical-align:middle;margin-right:5px}
 .admin-actions{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 14px}
 .admin-actions .btn{flex:1;min-width:145px}
+.ad-banner{position:relative;overflow:hidden;border-radius:18px;background:linear-gradient(120deg,#4c1d95,#7e22ce);color:#fff;min-height:150px;padding:20px;margin:12px 0;display:flex;align-items:center;gap:14px}
+.ad-banner img{width:105px;height:105px;object-fit:cover;border-radius:13px;background:#ffffff22}
+.ad-banner .ad-copy{flex:1;min-width:0}.ad-banner h3{margin:7px 0}.ad-banner p{margin:5px 0;font-size:13px}.ad-tag{display:inline-block;font-size:10px;letter-spacing:.5px;background:#ffffff2b;padding:5px 8px;border-radius:20px}
+.ad-dots{display:flex;justify-content:center;gap:6px;margin:0 0 12px}.ad-dot{width:7px;height:7px;border-radius:50%;background:#c4b5fd}.ad-dot.active{background:#6d28d9;width:18px}
+.sponsored-card{border:1px solid #e9d5ff;position:relative}.sponsored-card .sponsored-label{font-size:10px;color:#7e22ce;font-weight:bold;letter-spacing:.5px}
+.question-item{background:#faf7ff;padding:12px;border-radius:12px;margin:10px 0}.question-item label{display:block;margin-bottom:6px}
 </style>
 </head>
 <body>
@@ -121,6 +127,9 @@ let cachedSubmissions=[];
 let cachedWithdrawals=[];
 let myReferralCode="";
 let referralStats={total_referrals:0,completed:0,pending:0,total_earned_paise:0};
+let activeBannerAds=[];
+let activeBannerIndex=0;
+let adRotationTimer=null;
 
 const app=document.getElementById("app");
 const modalRoot=document.getElementById("modalRoot");
@@ -266,16 +275,26 @@ async function openPage(page){
   if(page==="community")return renderCommunity();
   if(page==="wallet")return renderWallet();
   if(page==="profile")return renderProfile();
+  if(page==="surveys")return renderSurveysPage();
+  if(page==="rewards")return renderRewardsPage();
+  if(page==="sponsor")return renderSponsorRequestPage();
 }
 
 async function renderHome(){
+  if(adRotationTimer){clearInterval(adRotationTimer);adRotationTimer=null;}
   await getWallet();
-  const [{data:homeTasks,error:homeTaskError},{data:homeApps,error:homeAppError}]=await Promise.all([
+  const [{data:homeTasks,error:homeTaskError},{data:homeApps,error:homeAppError},{data:bannerAds},{data:cardAds}]=await Promise.all([
     db.from("tasks").select("*").eq("status","published").order("created_at",{ascending:false}).limit(5),
-    db.from("sponsored_apps").select("id,app_name,description,icon_path,install_url").eq("status","published").order("created_at",{ascending:false})
+    db.from("sponsored_apps").select("id,app_name,description,icon_path,install_url").eq("status","published").order("created_at",{ascending:false}),
+    db.from("ads").select("*").eq("status","published").eq("placement","banner").order("created_at",{ascending:false}),
+    db.from("ads").select("*").eq("status","published").eq("placement","card").order("created_at",{ascending:false})
   ]);
   cachedTasks=homeTasks||[];
   cachedApps=homeApps||[];
+  activeBannerAds=(bannerAds||[]).filter(a=>(!a.start_at||new Date(a.start_at)<=new Date())&&(!a.end_at||new Date(a.end_at)>new Date()));
+  const visibleCardAds=(cardAds||[]).filter(a=>(!a.start_at||new Date(a.start_at)<=new Date())&&(!a.end_at||new Date(a.end_at)>new Date()));
+  window.hyyVisibleAds=[...(bannerAds||[]),...visibleCardAds];
+  activeBannerIndex=0;
   let latestTasksHtml="";
   if(homeTaskError||homeAppError){
     latestTasksHtml=`<div class="card muted">Tasks could not be loaded right now.</div>`;
@@ -287,42 +306,49 @@ async function renderHome(){
       const action=linkedApp?`openSponsoredApp('${safe(linkedApp.id)}')`:`openTask('${safe(task.id)}')`;
       const iconUrl=linkedApp?.icon_path?db.storage.from("app-icons").getPublicUrl(linkedApp.icon_path).data.publicUrl:"";
       const iconHtml=iconUrl?`<img class="featured-icon" src="${safe(iconUrl)}" alt="">`:`<div class="featured-icon">${linkedApp?"📱":"✨"}</div>`;
-      latestTasksHtml+=`<div class="card featured-task" role="button" tabindex="0" onclick="${action}">${iconHtml}<div class="featured-info"><h4>${safe(task.title)}</h4><p class="muted">${safe(task.description|| (linkedApp?linkedApp.app_name:"Complete this task and submit proof."))}</p></div><span class="featured-reward">🟡 ${money(task.reward_paise)}</span></div>`;
+      latestTasksHtml+=`<div class="card featured-task" role="button" tabindex="0" onclick="${action}">${iconHtml}<div class="featured-info"><h4>${safe(task.title)}</h4><p class="muted">${safe(task.description|| (linkedApp?linkedApp.app_name:"Complete this task and submit proof."))}</p></div><span class="featured-reward">${money(task.reward_paise)}</span></div>`;
     }
   }
+  const bannerHtml=activeBannerAds.length?`<div id="adBanner" class="ad-banner" onclick="openAd('${safe(activeBannerAds[0].id)}')" role="button" tabindex="0"></div><div id="adDots" class="ad-dots"></div>`:`<div class="card center muted">Sponsored banners will appear here.</div>`;
+  const sponsoredHtml=visibleCardAds.length?visibleCardAds.map(a=>`<div class="card sponsored-card"><div class="sponsored-label">SPONSORED</div>${a.image_url?`<img src="${safe(a.image_url)}" alt="" style="width:100%;max-height:130px;object-fit:cover;border-radius:12px;margin:8px 0">`:""}<h3>${safe(a.title)}</h3><p class="muted">${safe(a.description||"")}</p><button class="btn" onclick="openAd('${safe(a.id)}')">View Offer</button></div>`).join(""):`<p class="muted">No sponsored offers right now.</p>`;
   setPage(`
+    ${bannerHtml}
     <div class="card hero">
-      <p>Welcome back ${svgIcon("hand")}</p>
-      <h2>${safe(username)}</h2>
-      <p>Your wallet balance</p>
-      <div class="big">${money(walletBalance)}</div>
-      <button class="btn light" onclick="openPage('wallet')">View Wallet</button>
+      <p>Welcome back ${svgIcon("hand")}</p><h2>${safe(username)}</h2><p>Your wallet balance</p>
+      <div class="big">${money(walletBalance)}</div><button class="btn light" onclick="openPage('wallet')">View Wallet</button>
     </div>
-
-    <div class="card">
-      <div class="row"><h3>Daily Check-in ${svgIcon("gift")}</h3><span class="pill">Daily</span></div>
-      <p class="muted">Check in and see whether today's reward is available.</p>
-      <button class="btn" onclick="dailyCheckin()">Daily Check-in</button>
-    </div>
-
-    <h3>Earn More</h3>
-    <div class="grid">
+    <div class="card"><div class="row"><h3>Daily Check-in ${svgIcon("gift")}</h3><span class="pill">Daily</span></div><p class="muted">Check in and see whether today's reward is available.</p><button class="btn" onclick="dailyCheckin()">Daily Check-in</button></div>
+    <h3>Earn More</h3><div class="grid">
       <div class="tile" onclick="openPage('task')">${svgIcon("clipboard")}<br>Tasks</div>
-      <div class="tile" onclick="comingSoon()">${svgIcon("file")}<br>Surveys</div>
+      <div class="tile" onclick="openPage('surveys')">${svgIcon("file")}<br>Surveys</div>
       <div class="tile" onclick="comingSoon()">${svgIcon("gamepad")}<br>Games</div>
-      <div class="tile" onclick="comingSoon()">${svgIcon("gift")}<br>Rewards</div>
+      <div class="tile" onclick="openPage('rewards')">${svgIcon("gift")}<br>Rewards</div>
     </div>
-
-    <div class="row"><h3>Featured Tasks 🔥</h3><button class="btn light" onclick="openPage('task')">View All ›</button></div>
-    ${latestTasksHtml}
-
-    <div class="card">
-      <h3>Refer & Earn ${svgIcon("heart")}</h3>
-      <p class="muted">Invite friends. Earn ₹10 when their first task is approved.</p>
-      <button class="btn" onclick="openPage('refer')">Invite Friends</button>
-    </div>
+    <h3>Sponsored Offers</h3>${sponsoredHtml}
+    <div class="row"><h3>Featured Tasks 🔥</h3><button class="btn light" onclick="openPage('task')">View All ›</button></div>${latestTasksHtml}
+    <div class="card"><h3>Refer & Earn ${svgIcon("heart")}</h3><p class="muted">Invite friends. Earn ₹10 when their first task is approved.</p><button class="btn" onclick="openPage('refer')">Invite Friends</button></div>
+    <div class="card"><h3>Partner with HYY EARN</h3><p class="muted">Submit a sponsor request for review.</p><button class="btn light" onclick="openPage('sponsor')">Become a Sponsor</button></div>
   `);
+  if(activeBannerAds.length){renderActiveBanner();if(activeBannerAds.length>1)adRotationTimer=setInterval(()=>{activeBannerIndex=(activeBannerIndex+1)%activeBannerAds.length;renderActiveBanner();},5000);}
+  visibleCardAds.forEach(ad=>db.rpc("track_ad_event",{p_ad_id:ad.id,p_event_type:"impression"}).then(({error})=>{if(error)console.warn("Ad impression:",error.message);}));
 }
+function renderActiveBanner(){
+  const ad=activeBannerAds[activeBannerIndex];const box=document.getElementById("adBanner");const dots=document.getElementById("adDots");if(!ad||!box)return;
+  box.onclick=()=>openAd(ad.id);
+  box.innerHTML=`${ad.image_url?`<img src="${safe(ad.image_url)}" alt="">`:""}<div class="ad-copy"><span class="ad-tag">SPONSORED</span><h3>${safe(ad.title)}</h3><p>${safe(ad.description||"")}</p><b>Tap to view →</b></div>`;
+  if(dots)dots.innerHTML=activeBannerAds.map((_,i)=>`<span class="ad-dot ${i===activeBannerIndex?"active":""}"></span>`).join("");
+  db.rpc("track_ad_event",{p_ad_id:ad.id,p_event_type:"impression"}).then(({error})=>{if(error)console.warn("Ad impression:",error.message);});
+}
+function openAd(adId){
+  const ad=[...activeBannerAds].concat([]).find(a=>String(a.id)===String(adId));
+  const fallback=document.querySelector(`.sponsored-card button[onclick*="${adId}"]`);
+  const allAds=window.hyyVisibleAds||[];
+  const item=ad||allAds.find(a=>String(a.id)===String(adId));
+  if(!item){showMessage("This offer is not available.");return;}
+  if(item.target_url){window.open(item.target_url,"_blank","noopener,noreferrer");}
+  db.rpc("track_ad_event",{p_ad_id:item.id,p_event_type:"click"}).then(({error})=>{if(error)console.warn("Ad click:",error.message);});
+}
+
 async function dailyCheckin(){
   const {data,error}=await db.rpc("daily_checkin");
   if(error){showMessage(error.message);return;}
@@ -802,9 +828,175 @@ function showAdminDashboard(){
       <button class="btn light" onclick="renderAdminReferrals()">Referral Management</button>
       <button class="btn light" onclick="renderManageUsersPage()">Manage Users</button>
       <button class="btn light" onclick="renderAdminNotifications()">${svgIcon("bell")} Notifications</button>
+      <button class="btn light" onclick="renderAdminAds()">📢 Manage Ads</button>
+      <button class="btn light" onclick="renderSponsorRequests()">🤝 Sponsor Requests</button>
+      <button class="btn light" onclick="renderAdminSurveys()">📝 Survey Management</button>
+      <button class="btn light" onclick="renderSurveyResponses()">Survey Responses</button>
     </div>
   `);
 }
+// ---------------- ADS, SPONSORS, SURVEYS & REWARDS ----------------
+async function renderSponsorRequestPage(){
+  setPage(`<button class="btn light" onclick="openPage('home')">← Home</button><div class="card"><h2>Partner with HYY EARN</h2><p class="muted">Submit your business details. Requests are reviewed by the admin; submission does not guarantee approval or a paid campaign.</p>
+    <label>Company / App Name</label><input id="sponsorCompany" maxlength="120" placeholder="Company name">
+    <label>Contact Person</label><input id="sponsorContact" maxlength="100" placeholder="Your name">
+    <label>Business Email</label><input id="sponsorEmail" type="email" maxlength="180" placeholder="name@company.com">
+    <label>Promotion Type</label><select id="sponsorType"><option value="App promotion">App promotion</option><option value="Website promotion">Website promotion</option><option value="Product / service">Product / service</option><option value="Other">Other</option></select>
+    <label>Message (optional)</label><textarea id="sponsorMessage" maxlength="1500" placeholder="Tell us about your promotion"></textarea>
+    <button class="btn" onclick="submitSponsorRequest()">Submit Request</button>
+  </div>`);
+}
+async function submitSponsorRequest(){
+  const company_name=document.getElementById("sponsorCompany").value.trim();
+  const contact_name=document.getElementById("sponsorContact").value.trim();
+  const business_email=document.getElementById("sponsorEmail").value.trim();
+  const promotion_type=document.getElementById("sponsorType").value;
+  const message=document.getElementById("sponsorMessage").value.trim();
+  if(!company_name||!contact_name||!/^\S+@\S+\.\S+$/.test(business_email)){showMessage("Enter company, contact name and a valid business email.");return;}
+  const {error}=await db.from("sponsor_requests").insert({company_name,contact_name,business_email,promotion_type,message:message||null});
+  if(error){showMessage(error.message);return;}
+  showMessage("Sponsor request submitted for review.");openPage("home");
+}
+async function renderSponsorRequests(){
+  if(!requireAdmin())return;
+  const {data,error}=await db.from("sponsor_requests").select("*").order("created_at",{ascending:false});
+  if(error){adminShell(`<div class="card">${safe(error.message)}</div>`);return;}
+  let html=`<div class="card"><h3>Sponsor Requests</h3>`;
+  if(!data?.length)html+=`<p>No sponsor requests yet.</p>`;
+  for(const r of data||[])html+=`<hr><b>${safe(r.company_name)}</b> <span class="pill">${safe(r.status)}</span><p>${safe(r.contact_name)} · ${safe(r.business_email)}</p><p class="muted">${safe(r.promotion_type||"")} · ${new Date(r.created_at).toLocaleString()}</p><p>${safe(r.message||"")}</p>${r.status==="pending"?`<button class="btn small green" onclick="reviewSponsorRequest('${safe(r.id)}','approved')">Approve</button><button class="btn small red" onclick="reviewSponsorRequest('${safe(r.id)}','rejected')">Reject</button>`:""}`;
+  html+=`</div>`;adminShell(html);
+}
+async function reviewSponsorRequest(id,decision){
+  if(!requireAdmin())return;
+  const {error}=await db.rpc("admin_review_sponsor_request",{p_request_id:id,p_decision:decision});
+  if(error){showMessage(error.message);return;}showMessage("Sponsor request "+decision+".");renderSponsorRequests();
+}
+async function renderAdminAds(){
+  if(!requireAdmin())return;
+  const {data,error}=await db.from("ads").select("*").order("created_at",{ascending:false});
+  if(error){adminShell(`<div class="card">Unable to load ads: ${safe(error.message)}</div>`);return;}
+  let html=`<div class="card"><h3>Create Ad Campaign</h3><label>Ad Title</label><input id="adTitle" maxlength="120" placeholder="Campaign title"><label>Description</label><textarea id="adDescription" maxlength="500" placeholder="Short offer details"></textarea><label>Image URL (optional)</label><input id="adImage" type="url" placeholder="https://..."><label>Destination URL</label><input id="adTarget" type="url" placeholder="https://..."><label>Placement</label><select id="adPlacement"><option value="banner">Home rotating banner</option><option value="card">Sponsored offer card</option></select><label>Campaign Budget (₹) — tracking reference only</label><input id="adBudget" type="number" min="0" step="1" value="0"><label>Start Date (optional)</label><input id="adStart" type="datetime-local"><label>End Date (optional)</label><input id="adEnd" type="datetime-local"><button class="btn" onclick="createAdCampaign()">Publish Campaign</button><p class="muted">Only publish verified, suitable ads. Budget is recorded for reference; this demo does not process sponsor payments or calculate actual spend.</p></div><div class="card"><h3>Campaigns & Analytics</h3>`;
+  if(!data?.length)html+=`<p>No campaigns yet.</p>`;
+  for(const a of data||[])html+=`<hr><b>${safe(a.title)}</b> <span class="pill">${safe(a.status)}</span><p class="muted">${safe(a.placement)} · Budget reference ${money(a.budget_paise)}</p><p>Impressions: <b>${Number(a.impressions||0)}</b> · Clicks: <b>${Number(a.clicks||0)}</b></p>${a.target_url?`<p class="muted">${safe(a.target_url)}</p>`:""}<button class="btn small light" onclick="toggleAdCampaign('${safe(a.id)}','${safe(a.status)}')">${a.status==="published"?"Pause":"Publish"}</button><button class="btn small red" onclick="deleteAdCampaign('${safe(a.id)}')">Delete</button>`;
+  html+=`</div>`;adminShell(html);
+}
+async function createAdCampaign(){
+  if(!requireAdmin())return;
+  const title=document.getElementById("adTitle").value.trim(),description=document.getElementById("adDescription").value.trim();
+  const image_url=document.getElementById("adImage").value.trim(),target_url=document.getElementById("adTarget").value.trim();
+  const placement=document.getElementById("adPlacement").value,budget=Number(document.getElementById("adBudget").value||0);
+  const start=document.getElementById("adStart").value,end=document.getElementById("adEnd").value;
+  if(!title||!target_url||!/^https:\/\//i.test(target_url)){showMessage("Enter title and a valid https destination URL.");return;}
+  if(image_url&&!/^https:\/\//i.test(image_url)){showMessage("Image URL must start with https://");return;}
+  if(!Number.isFinite(budget)||budget<0){showMessage("Enter a valid budget.");return;}
+  const start_at=start?new Date(start).toISOString():null,end_at=end?new Date(end).toISOString():null;
+  if(start_at&&end_at&&new Date(end_at)<=new Date(start_at)){showMessage("End date must be after start date.");return;}
+  const {error}=await db.from("ads").insert({title,description:description||null,image_url:image_url||null,target_url,placement,budget_paise:Math.round(budget*100),start_at,end_at,status:"published",created_by:currentUser.id});
+  if(error){showMessage(error.message);return;}showMessage("Ad campaign published.");renderAdminAds();
+}
+async function toggleAdCampaign(id,status){
+  if(!requireAdmin())return;const next=status==="published"?"paused":"published";
+  const {error}=await db.from("ads").update({status:next}).eq("id",id);if(error){showMessage(error.message);return;}renderAdminAds();
+}
+async function deleteAdCampaign(id){
+  if(!requireAdmin()||!confirm("Delete this campaign and its event history?"))return;
+  const {error}=await db.from("ads").delete().eq("id",id);if(error){showMessage(error.message);return;}renderAdminAds();
+}
+async function renderSurveysPage(){
+  const {data:surveys,error}=await db.from("surveys").select("id,title,description,reward_paise").eq("status","published").order("created_at",{ascending:false});
+  if(error){setPage(`<div class="card">Unable to load surveys: ${safe(error.message)}</div>`);return;}
+  let html=`<button class="btn light" onclick="openPage('home')">← Home</button><h2>Available Surveys</h2>`;
+  if(!surveys?.length)html+=`<div class="card center">No surveys available right now.</div>`;
+  for(const s of surveys||[]){
+    const {data:existing}=await db.from("survey_responses").select("status").eq("survey_id",s.id).eq("user_id",currentUser.id).maybeSingle();
+    html+=`<div class="card"><span class="pill">Reward ${money(s.reward_paise)}</span><h3>${safe(s.title)}</h3><p class="muted">${safe(s.description||"")}</p>${existing?`<p class="status ${safe(existing.status)}">Already submitted · ${safe(existing.status)}</p>`:`<button class="btn" onclick="openSurvey('${safe(s.id)}')">Start Survey</button>`}</div>`;
+  }
+  setPage(html);
+}
+async function openSurvey(surveyId){
+  const [{data:survey,error:sErr},{data:questions,error:qErr}]=await Promise.all([
+    db.from("surveys").select("id,title,description,reward_paise").eq("id",surveyId).eq("status","published").single(),
+    db.from("survey_questions").select("*").eq("survey_id",surveyId).order("position")
+  ]);
+  if(sErr||qErr||!survey){showMessage((sErr||qErr)?.message||"Survey unavailable.");return;}
+  if(!questions?.length){showMessage("This survey has no questions yet.");return;}
+  let html=`<button class="btn light" onclick="openPage('surveys')">← Surveys</button><div class="card"><span class="pill">Reward ${money(survey.reward_paise)}</span><h2>${safe(survey.title)}</h2><p class="muted">${safe(survey.description||"")}</p>`;
+  for(const q of questions){
+    const opts=Array.isArray(q.options)?q.options:[];
+    html+=`<div class="question-item"><label>${safe(q.question)}</label>${q.question_type==="single_choice"?`<select name="survey_q_${safe(q.id)}"><option value="">Select an answer</option>${opts.map(o=>`<option value="${safe(o)}">${safe(o)}</option>`).join("")}</select>`:`<textarea name="survey_q_${safe(q.id)}" maxlength="1000" placeholder="Your answer"></textarea>`}</div>`;
+  }
+  html+=`<button class="btn" onclick="submitSurvey('${safe(survey.id)}')">Submit Survey</button></div>`;setPage(html);
+}
+async function submitSurvey(surveyId){
+  const {data:questions,error:qErr}=await db.from("survey_questions").select("id,question").eq("survey_id",surveyId).order("position");
+  if(qErr){showMessage(qErr.message);return;}
+  const answers={};
+  for(const q of questions||[]){const el=document.querySelector(`[name="survey_q_${q.id}"]`);const value=el?.value?.trim()||"";if(!value){showMessage("Please answer all questions.");return;}answers[q.id]=value;}
+  const {error}=await db.from("survey_responses").insert({survey_id:surveyId,user_id:currentUser.id,answers,status:"pending",reward_paise:0});
+  if(error){showMessage(error.code==="23505"?"You have already submitted this survey.":error.message);return;}
+  showMessage("Survey submitted for review. Reward is pending admin approval.");renderSurveysPage();
+}
+async function renderRewardsPage(){
+  await getWallet();
+  const {data,error}=await db.from("reward_history").select("*").eq("user_id",currentUser.id).order("created_at",{ascending:false});
+  if(error){setPage(`<div class="card">Unable to load rewards: ${safe(error.message)}</div>`);return;}
+  const rows=data||[];const approved=rows.filter(x=>x.status==="approved").reduce((n,x)=>n+Number(x.amount_paise||0),0);const pending=rows.filter(x=>x.status==="pending").reduce((n,x)=>n+Number(x.amount_paise||0),0);
+  let html=`<button class="btn light" onclick="openPage('home')">← Home</button><h2>Rewards History</h2><div class="stat-grid"><div class="stat-box">Approved rewards<b>${money(approved)}</b></div><div class="stat-box">Pending rewards<b>${money(pending)}</b></div><div class="stat-box">Wallet balance<b>${money(walletBalance)}</b></div></div><div class="card"><h3>History</h3>`;
+  if(!rows.length)html+=`<p>No reward history yet.</p>`;
+  for(const r of rows)html+=`<hr><div class="row"><b>${safe(r.description||r.source_type)}</b><span>${money(r.amount_paise)}</span></div><p class="muted">${new Date(r.created_at).toLocaleString()} · <span class="status ${safe(r.status)}">${safe(r.status)}</span></p>`;
+  html+=`</div>`;setPage(html);
+}
+async function renderAdminSurveys(){
+  if(!requireAdmin())return;
+  const {data,error}=await db.from("surveys").select("*").order("created_at",{ascending:false});
+  if(error){adminShell(`<div class="card">${safe(error.message)}</div>`);return;}
+  let html=`<div class="card"><h3>Create Survey</h3><label>Survey Title</label><input id="newSurveyTitle" maxlength="150"><label>Description</label><textarea id="newSurveyDescription" maxlength="1000"></textarea><label>Reward (₹)</label><input id="newSurveyReward" type="number" min="0" step="1" value="0"><button class="btn" onclick="createSurvey()">Create Draft Survey</button></div><div class="card"><h3>Survey List</h3>`;
+  if(!data?.length)html+=`<p>No surveys created.</p>`;
+  for(const s of data||[])html+=`<hr><b>${safe(s.title)}</b> <span class="pill">${safe(s.status)}</span><p class="muted">Reward ${money(s.reward_paise)}</p><button class="btn small" onclick="manageSurveyQuestions('${safe(s.id)}')">Manage Questions</button><button class="btn small light" onclick="toggleSurvey('${safe(s.id)}','${safe(s.status)}')">${s.status==="published"?"Pause":s.status==="draft"?"Publish":"Publish"}</button>`;
+  html+=`</div>`;adminShell(html);
+}
+async function createSurvey(){
+  if(!requireAdmin())return;const title=document.getElementById("newSurveyTitle").value.trim(),description=document.getElementById("newSurveyDescription").value.trim(),reward=Number(document.getElementById("newSurveyReward").value);
+  if(!title||!Number.isFinite(reward)||reward<0){showMessage("Enter survey title and valid reward.");return;}
+  const {error}=await db.from("surveys").insert({title,description:description||null,reward_paise:Math.round(reward*100),status:"draft",created_by:currentUser.id});
+  if(error){showMessage(error.message);return;}showMessage("Draft survey created. Add questions before publishing.");renderAdminSurveys();
+}
+async function manageSurveyQuestions(id){
+  if(!requireAdmin())return;const {data:survey,error}=await db.from("surveys").select("id,title,status").eq("id",id).single();if(error){showMessage(error.message);return;}
+  const {data:questions,error:qErr}=await db.from("survey_questions").select("*").eq("survey_id",id).order("position");if(qErr){showMessage(qErr.message);return;}
+  let html=`<div class="card"><h3>Questions: ${safe(survey.title)}</h3><label>Question</label><input id="surveyQuestionText" maxlength="500" placeholder="Ask a non-sensitive question"><label>Question Type</label><select id="surveyQuestionType"><option value="text">Text answer</option><option value="single_choice">Single choice</option></select><label>Options (one per line; for single choice)</label><textarea id="surveyQuestionOptions" placeholder="Option 1&#10;Option 2"></textarea><button class="btn" onclick="addSurveyQuestion('${safe(id)}')">Add Question</button><button class="btn light" onclick="renderAdminSurveys()">Back</button><hr><h4>Existing Questions</h4>`;
+  if(!questions?.length)html+=`<p>No questions added.</p>`;for(const q of questions||[])html+=`<p>${Number(q.position)+1}. ${safe(q.question)} <span class="pill">${safe(q.question_type)}</span></p>`;
+  html+=`</div>`;adminShell(html);
+}
+async function addSurveyQuestion(id){
+  if(!requireAdmin())return;const question=document.getElementById("surveyQuestionText").value.trim(),question_type=document.getElementById("surveyQuestionType").value,raw=document.getElementById("surveyQuestionOptions").value;
+  if(!question){showMessage("Enter a question.");return;}const options=question_type==="single_choice"?raw.split("\n").map(x=>x.trim()).filter(Boolean):[];
+  if(question_type==="single_choice"&&options.length<2){showMessage("Add at least two options.");return;}
+  const {count,error:countError}=await db.from("survey_questions").select("id",{count:"exact",head:true}).eq("survey_id",id);if(countError){showMessage(countError.message);return;}
+  const {error}=await db.from("survey_questions").insert({survey_id:id,question,question_type,options,position:count||0});if(error){showMessage(error.message);return;}manageSurveyQuestions(id);
+}
+async function toggleSurvey(id,status){
+  if(!requireAdmin())return;const next=status==="published"?"paused":"published";
+  if(next==="published"){
+    const {count,error:countError}=await db.from("survey_questions").select("id",{count:"exact",head:true}).eq("survey_id",id);
+    if(countError){showMessage(countError.message);return;}
+    if(!count){showMessage("Add at least one question before publishing.");return;}
+  }
+  const {error}=await db.from("surveys").update({status:next}).eq("id",id);if(error){showMessage(error.message);return;}renderAdminSurveys();
+}
+async function renderSurveyResponses(){
+  if(!requireAdmin())return;const {data,error}=await db.from("survey_responses").select("*").order("submitted_at",{ascending:false});
+  if(error){adminShell(`<div class="card">${safe(error.message)}</div>`);return;}
+  let html=`<div class="card"><h3>Survey Responses</h3>`;if(!data?.length)html+=`<p>No responses yet.</p>`;
+  for(const r of data||[]){const {data:s}=await db.from("surveys").select("title,reward_paise").eq("id",r.survey_id).maybeSingle();
+    html+=`<hr><b>${safe(s?.title||"Survey")}</b> <span class="pill">${safe(r.status)}</span><p class="muted">User: ${safe(r.user_id)} · Submitted ${new Date(r.submitted_at).toLocaleString()}</p><div class="question-item">${Object.entries(r.answers||{}).map(([k,v])=>`<p><b>${safe(k)}:</b> ${safe(v)}</p>`).join("")}</div>${r.status==="pending"?`<button class="btn small green" onclick="reviewSurveyResponse('${safe(r.id)}','approved')">Approve · ${money(s?.reward_paise||0)}</button><button class="btn small red" onclick="reviewSurveyResponse('${safe(r.id)}','rejected')">Reject</button>`:""}`;
+  }
+  html+=`</div>`;adminShell(html);
+}
+async function reviewSurveyResponse(id,decision){
+  if(!requireAdmin())return;const {error}=await db.rpc("admin_review_survey_response",{p_response_id:id,p_decision:decision});if(error){showMessage(error.message);return;}showMessage("Survey response "+decision+".");renderSurveyResponses();
+}
+
 async function renderCreateTaskPage(){
   if(!requireAdmin())return;
   adminShell(`
