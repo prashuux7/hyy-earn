@@ -67,6 +67,13 @@ hr{border:0;border-top:1px solid #eee;margin:14px 0}
 </style>
 </head>
   <link rel="manifest" href="/manifest.webmanifest">
+ <script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js");
+  });
+}
+ </script> 
 <body>
 
 <header>
