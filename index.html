@@ -196,7 +196,9 @@ async function checkAdmin(){
 }
 async function refreshAccount(){
   await Promise.all([getWallet(),getUsername(),checkAdmin()]);
-}// Link the referral after the invited person has logged in.
+}
+
+// Link the referral after the invited person has logged in.
 async function processPendingReferral(){
   const code=localStorage.getItem("hyy_pending_referral");
   if(!code||!currentUser)return;
@@ -295,7 +297,8 @@ async function renderHome(){
       <p class="muted">Explore tasks and submit proof after completing them.</p>
       <button class="btn" onclick="openPage('task')">View Tasks</button>
     </div>
-        <div class="card">
+
+    <div class="card">
       <h3>Refer & Earn ${svgIcon("heart")}</h3>
       <p class="muted">Invite friends. Earn ₹10 when their first task is approved.</p>
       <button class="btn" onclick="openPage('refer')">Invite Friends</button>
@@ -395,7 +398,7 @@ async function submitProof(taskId){
   const file=document.getElementById("proofFile").files[0];
   if(!proofText&&!proofUrl&&!file){
     showMessage("Please add proof text, a link, or a screenshot.");return;
-      }
+  }
   if(proofUrl&&!/^https?:\/\//i.test(proofUrl)){
     showMessage("Proof link must start with http:// or https://");return;
   }
@@ -495,7 +498,8 @@ async function renderReferPage(){
         <li>You receive ₹10 in your wallet after approval.</li>
       </ol>
     </div>
-        <div class="card">
+
+    <div class="card">
       <h3>Referral Rules</h3>
       <ol class="rule-list">
         <li>Earn ₹10 for every successful referral.</li>
@@ -593,9 +597,8 @@ function openWithdraw(){
     </div></div>`;
 }
 async function sendWithdrawal(){
-  
   const fullName=document.getElementById("withdrawName").value.trim();
-    const upi=document.getElementById("withdrawUpi").value.trim();
+  const upi=document.getElementById("withdrawUpi").value.trim();
   const amount=Number(document.getElementById("withdrawAmount").value);
   if(!fullName||!upi||!Number.isFinite(amount)||amount<100){
     showMessage("Enter valid details. Minimum amount is ₹100.");return;
@@ -694,7 +697,8 @@ async function deleteNotification(id){
   if(!requireAdmin()||!confirm("Delete this announcement?"))return;
   const {error}=await db.from("notifications").delete().eq("id",id);
   if(error){showMessage(error.message);return;}renderAdminNotifications();
-}function renderPrivacyPage(){
+}
+function renderPrivacyPage(){
   setPage(`<button class="btn light" onclick="openPage('profile')">← Profile</button><div class="card">
     <h2>${svgIcon("shield")} Privacy Policy</h2>
     <p class="muted">Demo policy — review and replace with your final legal policy before public launch.</p>
@@ -794,7 +798,7 @@ async function renderCreateTaskPage(){
       <textarea id="newTaskDescription" placeholder="Explain the task"></textarea>
       <label>Category</label>
       <select id="newTaskCategory">
-             <option>Survey</option><option>Social Media</option>
+        <option>Survey</option><option>Social Media</option>
         <option>Website</option><option>App</option><option>Other</option>
       </select>
       <div id="appTaskPicker" class="hidden"><label>Sponsored App</label><select id="newTaskApp"></select></div>
@@ -861,58 +865,8 @@ async function renderManageApps(){
   if(error){list.innerHTML=`Unable to load apps: ${safe(error.message)}`;return;}
   let html="<h3>Your Sponsored Apps</h3>";
   if(!data?.length)html+="<p>No apps added yet.</p>";
-  for(const a of data||[]){
-    const {data:appTasks,error:tasksError}=await db.from("tasks").select("id,title,reward_paise,status").eq("app_id",a.id).order("created_at",{ascending:false});
-    html+=`<hr><b>${safe(a.app_name)}</b> <span class="pill">${safe(a.status)}</span>
-      <p class="muted">${safe(a.description||"")}</p>
-      <button class="btn small" onclick="renderAppPromotionTaskForm('${safe(a.id)}')">＋ Add Task & Reward</button>
-      <button class="btn small light" onclick="toggleSponsoredApp('${safe(a.id)}','${safe(a.status)}')">${a.status==="published"?"Pause":"Publish"}</button>
-      <button class="btn small red" onclick="deleteSponsoredApp('${safe(a.id)}','${safe(a.icon_path||"")}')">Delete</button>`;
-    if(tasksError) html+=`<p class="muted">Unable to load app tasks: ${safe(tasksError.message)}</p>`;
-    else if(!appTasks?.length) html+=`<p class="muted">No tasks added for this app yet.</p>`;
-    else {
-      html+=`<div class="card"><b>App Tasks & Rewards</b>`;
-      for(const t of appTasks) html+=`<p>${safe(t.title)} — <b>${money(t.reward_paise)}</b> <span class="pill">${safe(t.status)}</span></p>`;
-      html+=`</div>`;
-    }
-  }
+  for(const a of data||[]){html+=`<hr><b>${safe(a.app_name)}</b> <span class="pill">${safe(a.status)}</span><p class="muted">${safe(a.description||"")}</p><button class="btn small light" onclick="toggleSponsoredApp('${safe(a.id)}','${safe(a.status)}')">${a.status==="published"?"Pause":"Publish"}</button><button class="btn small red" onclick="deleteSponsoredApp('${safe(a.id)}','${safe(a.icon_path||"")}')">Delete</button>`;}
   list.innerHTML=html;
-}
-async function renderAppPromotionTaskForm(appId){
-  if(!requireAdmin())return;
-  const {data:app,error}=await db.from("sponsored_apps").select("id,app_name").eq("id",appId).single();
-  if(error||!app){showMessage(error?.message||"App not found.");return;}
-  adminShell(`<div class="card">
-    <h3>Add Task for ${safe(app.app_name)}</h3>
-    <p class="muted">Set a separate reward for this task. Users will see this amount before submitting proof.</p>
-    <label>Task Title</label><input id="appPromoTaskTitle" placeholder="e.g. Install and register">
-    <label>Task Instructions</label><textarea id="appPromoTaskDescription" placeholder="Explain exactly what the user must complete"></textarea>
-    <label>Reward Amount (₹)</label><input id="appPromoTaskReward" type="number" min="1" step="1" placeholder="Enter reward amount">
-    <label>Task Link (optional)</label><input id="appPromoTaskLink" type="url" placeholder="https://...">
-    <button class="btn" onclick="saveAppPromotionTask('${safe(app.id)}','published')">Publish Task</button>
-    <button class="btn light" onclick="saveAppPromotionTask('${safe(app.id)}','draft')">Save as Draft</button>
-    <button class="btn light" onclick="renderManageApps()">Back to App Promotions</button>
-  </div>`);
-} 
-  async function saveAppPromotionTask(appId,status){
-  if(!requireAdmin())return;
-  const title=document.getElementById("appPromoTaskTitle").value.trim();
-  const description=document.getElementById("appPromoTaskDescription").value.trim();
-  const reward=Number(document.getElementById("appPromoTaskReward").value);
-  const taskUrl=document.getElementById("appPromoTaskLink").value.trim();
-  if(!title||!description||!Number.isFinite(reward)||reward<=0){
-    showMessage("Enter task title, instructions and a valid reward amount.");return;
-  }
-  if(taskUrl&&!/^https:\/\//i.test(taskUrl)){
-    showMessage("Task link must start with https://");return;
-  }
-  const {error}=await db.from("tasks").insert({
-    title,description,category:"App",reward_paise:Math.round(reward*100),
-    task_url:taskUrl||null,status,app_id:appId
-  });
-  if(error){showMessage(error.message);return;}
-  showMessage(status==="published"?"App task published with reward!":"App task saved as draft!");
-  renderManageApps();
 }
 async function saveSponsoredApp(){
   if(!requireAdmin())return;
@@ -994,107 +948,107 @@ async function updateTask(taskId){
   const reward=Number(document.getElementById("editReward").value);
   const taskUrl=document.getElementById("editLink").value.trim();
   if(!title||!description||!Number.isFinite(reward)||reward<=0){
-       <div class="card">
-      <h3>Refer & Earn ${svgIcon("heart")}</h3>
-      <p class="muted">Invite friends. Earn ₹10 when their first task is approved.</p>
-      <button class="btn" onclick="openPage('refer')">Invite Friends</button>
-    </div>
-  `);
-}
-async function dailyCheckin(){
-  const {data,error}=await db.rpc("daily_checkin");
-  if(error){showMessage(error.message);return;}
-  showMessage(typeof data==="string"?data:"Check-in response received!");
-  await getWallet();
-  renderHome();
-}
-function comingSoon(){showMessage("Coming Soon!");}
-
-async function renderTasks(){
-  setPage(`<h2>Available Tasks ${svgIcon("clipboard")}</h2><p class="muted">Loading tasks and apps...</p>`);
-  const [{data:tasks,error:taskError},{data:apps,error:appError}]=await Promise.all([
-    db.from("tasks").select("*").eq("status","published").order("created_at",{ascending:false}),
-    db.from("sponsored_apps").select("id,app_name,description,icon_path,install_url").eq("status","published").order("created_at",{ascending:false})
-  ]);
-  if(taskError||appError){setPage(`<div class="card">Unable to load tasks: ${safe((taskError||appError).message)}</div>`);return;}
-  cachedTasks=tasks||[]; cachedApps=apps||[];
-  let html=`<h2>Available Tasks ${svgIcon("clipboard")}</h2><p class="muted">Explore sponsored apps and other tasks.</p>`;
-  if(cachedApps.length){
-    html+=`<h3>Featured Apps</h3>`;
-    for(const a of cachedApps){
-      const iconUrl=a.icon_path?db.storage.from("app-icons").getPublicUrl(a.icon_path).data.publicUrl:"";
-      html+=`<div class="card app-card" onclick="openSponsoredApp('${safe(a.id)}')" style="cursor:pointer">
-        ${iconUrl?`<img class="app-icon" src="${safe(iconUrl)}" alt="${safe(a.app_name)} icon">`:`<div class="app-icon" style="display:grid;place-items:center;font-size:25px">📱</div>`}
-        <div style="flex:1;min-width:0"><h3>${safe(a.app_name)}</h3><p class="muted">${safe(a.description||"Sponsored app")}</p><span class="pill">View app tasks →</span></div></div>`;
-    }
+    showMessage("Enter valid task details.");return;
   }
-  const otherTasks=cachedTasks.filter(t=>t.category!=="App"&&!t.app_id);
-  html+=`<h3>Other Tasks</h3>`;
-  if(!otherTasks.length)html+=`<div class="card center">No other tasks right now.</div>`;
-  for(const task of otherTasks){html+=`<div class="card task"><div class="row"><span class="pill">${safe(task.category||"Task")}</span><b>${money(task.reward_paise)}</b></div><h3>${safe(task.title)}</h3><p class="muted">${safe(task.description||"")}</p><button class="btn" onclick="openTask('${safe(task.id)}')">View Task</button></div>`;}
-  setPage(html);
-}
-async function openSponsoredApp(appId){
-  const a=cachedApps.find(x=>String(x.id)===String(appId)); if(!a)return;
-  const {data:tasks,error}=await db.from("tasks").select("*").eq("app_id",appId).eq("status","published").order("created_at",{ascending:false});
-  if(error){showMessage(error.message);return;}
-  cachedTasks=(cachedTasks||[]).filter(t=>String(t.app_id)!==String(appId)).concat(tasks||[]);
-  const iconUrl=a.icon_path?db.storage.from("app-icons").getPublicUrl(a.icon_path).data.publicUrl:"";
-  let html=`<button class="btn light" onclick="renderTasks()">← Back to Tasks</button><div class="card">${iconUrl?`<img class="app-icon" src="${safe(iconUrl)}" alt="App icon">`:`<div class="app-icon" style="display:grid;place-items:center">📱</div>`}<h2>${safe(a.app_name)}</h2><p>${safe(a.description||"")}</p>${a.install_url?`<a class="btn" href="${safe(a.install_url)}" target="_blank" rel="noopener">Open official app page ↗</a>`:""}</div><h3>Tasks for ${safe(a.app_name)}</h3>`;
-  if(!tasks?.length)html+=`<div class="card center">No tasks available for this app yet.</div>`;
-  for(const t of tasks||[]){
-    const {data:sub}=await db.from("task_submissions").select("status").eq("task_id",t.id).eq("user_id",currentUser.id).maybeSingle();
-    html+=`<div class="card task"><div class="row"><span class="pill">App Task</span><b>${money(t.reward_paise)}</b></div><h3>${safe(t.title)}</h3><p>${safe(t.description||"")}</p>${t.task_url?`<a href="${safe(t.task_url)}" target="_blank" rel="noopener">Open task instructions ↗</a><br>`:""}${sub?`<p class="status ${safe(sub.status)}">Your submission: ${safe(sub.status)}</p>`:`<button class="btn" onclick="openProof('${safe(t.id)}')">Complete & Submit Proof</button>`}</div>`;
+  if(taskUrl&&!/^https?:\/\//i.test(taskUrl)){
+    showMessage("Task link must start with http:// or https://");return;
   }
-  setPage(html);
+  const {error}=await db.from("tasks").update({
+    title,description,category,
+    reward_paise:Math.round(reward*100),
+    task_url:taskUrl||null
+  }).eq("id",taskId);
+  if(error){showMessage(error.message);return;}
+  showMessage("Task updated.");
+  renderAdminTasks();
 }
-async function openTask(taskId){
-  const task=cachedTasks.find(t=>String(t.id)===String(taskId));
-  if(!task)return;
-  const {data:submission}=await db.from("task_submissions")
-    .select("status")
-    .eq("task_id",taskId)
-    .eq("user_id",currentUser.id)
-    .maybeSingle();
+async function toggleTask(taskId,status){
+  if(!requireAdmin())return;
+  const next=status==="published"?"paused":"published";
+  const {error}=await db.from("tasks").update({status:next}).eq("id",taskId);
+  if(error){showMessage(error.message);return;}
+  renderAdminTasks();
+}
+async function deleteTask(taskId){
+  if(!requireAdmin())return;
+  if(!confirm("Delete this task?"))return;
+  const {error}=await db.from("tasks").delete().eq("id",taskId);
+  if(error){showMessage(error.message);return;}
+  showMessage("Task deleted.");
+  renderAdminTasks();
+}
+async function renderApprovalsPage(){
+  if(!requireAdmin())return;
+  adminShell(`<div class="card"><h3>Task Approvals</h3><p>Loading submissions...</p></div>`);
+  const {data,error}=await db.rpc("admin_list_submissions");
+  if(error){
+    adminShell(`<div class="card">Unable to load submissions: ${safe(error.message)}</div>`);
+    return;
+  }
+  cachedSubmissions=data||[];
+  let html=`<div class="card"><h3>Task Approvals</h3>`;
+  if(!cachedSubmissions.length)html+=`<p>No submissions found.</p>`;
+  for(const s of cachedSubmissions){
+    const taskName=s.task_title||s.title||"Task submission";
+    html+=`
+      <hr><b>${safe(taskName)}</b>
+      <p class="muted">User: ${safe(s.username||s.user_id||"Unknown")}</p>
+      <p class="status ${safe(s.status)}">${safe(s.status||"pending")}</p>
+      ${s.proof_text?`<p>${safe(s.proof_text)}</p>`:""}
+      ${s.proof_url?`<p><a href="${safe(s.proof_url)}" target="_blank" rel="noopener">Open proof link</a></p>`:""}
+      ${s.proof_path?`<button class="btn small light" onclick="viewProof('${safe(s.proof_path)}')">View Screenshot</button>`:""}
+      ${s.status==="pending"?`
+        <button class="btn small green" onclick="reviewTask('${safe(s.id)}',true)">Approve</button>
+        <button class="btn small red" onclick="reviewTask('${safe(s.id)}',false)">Reject</button>
+      `:""}
+    `;
+  }
+  html+=`</div>`;
+  adminShell(html);
+}
+async function viewProof(path){
+  if(!requireAdmin())return;
+  const {data,error}=await db.storage.from("proofs").createSignedUrl(path,300);
+  if(error){showMessage(error.message);return;}
+  window.open(data.signedUrl,"_blank");
+}
+async function reviewTask(submissionId,approved){
+  if(!requireAdmin())return;
+  const {error}=await db.rpc("review_submission",{
+    p_id:submissionId,p_approve:approved
+  });
+  if(error){showMessage(error.message);return;}
+  showMessage(approved?"Submission approved.":"Submission rejected.");
+  renderApprovalsPage();
+}
+async function renderAdminReferrals(){
+  if(!requireAdmin())return;
+  adminShell(`<div class="card"><h3>Referral Management</h3><p>Loading referrals...</p></div>`);
 
-  let statusHtml=submission
-    ?`<p class="status ${safe(submission.status)}">Your submission: ${safe(submission.status)}</p>`
-    :`<button class="btn" onclick="openProof('${safe(task.id)}')">Submit Proof</button>`;
+  const {data,error}=await db.rpc("admin_list_referrals");
+  if(error){
+    adminShell(`
+      <div class="card">
+        <h3>Referral Management</h3>
+        <p>Unable to load referrals.</p>
+        <p class="muted">${safe(error.message)}</p>
+        <button class="btn light" onclick="showAdminDashboard()">← Admin Dashboard</button>
+      </div>`);
+    return;
+  }
 
-  setPage(`
-    <button class="btn light" onclick="renderTasks()">← Back to Tasks</button>
+  const referrals=data||[];
+  const count=status=>referrals.filter(r=>r.status===status).length;
+  const completed=referrals.filter(r=>r.status==="completed");
+  const earned=completed.reduce((sum,r)=>sum+Number(r.reward_paise||0),0);
+
+  let html=`
     <div class="card">
-      <span class="pill">${safe(task.category||"Task")}</span>
-      <h2>${safe(task.title)}</h2>
-      <h3>${money(task.reward_paise)} reward</h3>
-      <p>${safe(task.description||"No description available.")}</p>
-      ${task.task_url?`<p><a href="${safe(task.task_url)}" target="_blank" rel="noopener">Open Task Link ↗</a></p>`:""}
-      <hr>${statusHtml}
-    </div>
-  `);
-}
-function openProof(taskId){
-  modalRoot.innerHTML=`
-    <div class="modal"><div class="modalbox">
-      <h3>Submit Task Proof</h3>
-      <label>Proof description</label>
-      <textarea id="proofText" placeholder="Describe what you completed"></textarea>
-      <label>Proof link (optional)</label>
-      <input id="proofUrl" placeholder="https://...">
-      <label>Screenshot (optional, JPG/PNG/WebP, max 5 MB)</label>
-      <input id="proofFile" type="file" accept="image/jpeg,image/png,image/webp">
-      <button class="btn" onclick="submitProof('${safe(taskId)}')">Submit Proof</button>
-      <button class="btn light" onclick="closeModal()">Cancel</button>
-    </div></div>`;
-}
-function closeModal(){modalRoot.innerHTML="";}
-async function submitProof(taskId){
-  const proofText=document.getElementById("proofText").value.trim();
-  const proofUrl=document.getElementById("proofUrl").value.trim();
-  const file=document.getElementById("proofFile").files[0];
-  if(!proofText&&!proofUrl&&!file){
-    showMessage("Please add proof text, a link, or a screenshot.");return;
-          <div class="stat-grid">
+      <div class="row">
+        <h3>Referral Management</h3>
+        <span class="pill">${referrals.length} total</span>
+      </div>
+      <div class="stat-grid">
         <div class="stat-box"><span class="muted">Total Referrals</span><b>${referrals.length}</b></div>
         <div class="stat-box"><span class="muted">Pending Review</span><b>${count("pending")}</b></div>
         <div class="stat-box"><span class="muted">Approved</span><b>${count("approved")}</b></div>
@@ -1194,7 +1148,7 @@ async function renderManageUsersPage(){
   if(!requireAdmin())return;
   adminShell(`
     <div class="card">
-         <h3>Manage Users</h3>
+      <h3>Manage Users</h3>
       <input id="userSearch" placeholder="Search username or user ID">
       <button class="btn" onclick="loadAdminUsers()">Search Users</button>
       <div id="usersResult"><p class="muted">Enter a search term or load users.</p></div>
@@ -1240,4 +1194,4 @@ initIcons();
 startApp();
 </script>
 </body>
-</html> 
+</html>
