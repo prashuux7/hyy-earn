@@ -1,0 +1,13 @@
+
+{
+  "id": "/",
+  "name": "HYY EARN",
+  "short_name": "HYY EARN",
+  "description": "Complete tasks, participate in surveys and earn rewards with HYY EARN.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f5eaff",
+  "theme_color": "#7c3aed"
+}
