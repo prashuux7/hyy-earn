@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -45,6 +44,7 @@ hr{border:0;border-top:1px solid #eee;margin:14px 0}
 .menu{position:absolute;right:15px;top:60px;background:white;color:#321064;padding:12px;border-radius:12px;box-shadow:0 5px 20px #0002;min-width:180px}
 .menu button{display:block;width:100%;text-align:left;padding:10px;background:white;color:#321064}
 .task{border:1px solid #eee5ff}
+.featured-task{display:flex;align-items:center;gap:12px;padding:13px;margin:10px 0;cursor:pointer}.featured-task .featured-icon{width:48px;height:48px;flex:0 0 48px;border-radius:13px;object-fit:cover;background:#eee5ff;display:grid;place-items:center;font-size:22px}.featured-task .featured-info{min-width:0;flex:1}.featured-task .featured-info h4{margin:0 0 4px;font-size:15px}.featured-task .featured-info p{margin:0;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.featured-reward{white-space:nowrap;background:#eeeaff;color:#5946b8;border-radius:18px;padding:7px 10px;font-size:12px;font-weight:700}
 .app-icon{width:58px;height:58px;border-radius:14px;object-fit:cover;background:#eee5ff;flex:0 0 auto}
 .app-card{display:flex;align-items:center;gap:13px}.app-card h3{margin:0 0 5px}
 .center{text-align:center;padding:35px 10px}
@@ -269,6 +269,26 @@ async function openPage(page){
 
 async function renderHome(){
   await getWallet();
+  const [{data:homeTasks,error:homeTaskError},{data:homeApps,error:homeAppError}]=await Promise.all([
+    db.from("tasks").select("*").eq("status","published").order("created_at",{ascending:false}).limit(5),
+    db.from("sponsored_apps").select("id,app_name,description,icon_path,install_url").eq("status","published").order("created_at",{ascending:false})
+  ]);
+  cachedTasks=homeTasks||[];
+  cachedApps=homeApps||[];
+  let latestTasksHtml="";
+  if(homeTaskError||homeAppError){
+    latestTasksHtml=`<div class="card muted">Tasks could not be loaded right now.</div>`;
+  }else if(!cachedTasks.length){
+    latestTasksHtml=`<div class="card center">New tasks coming soon!</div>`;
+  }else{
+    for(const task of cachedTasks){
+      const linkedApp=task.app_id?cachedApps.find(a=>String(a.id)===String(task.app_id)):null;
+      const action=linkedApp?`openSponsoredApp('${safe(linkedApp.id)}')`:`openTask('${safe(task.id)}')`;
+      const iconUrl=linkedApp?.icon_path?db.storage.from("app-icons").getPublicUrl(linkedApp.icon_path).data.publicUrl:"";
+      const iconHtml=iconUrl?`<img class="featured-icon" src="${safe(iconUrl)}" alt="">`:`<div class="featured-icon">${linkedApp?"📱":"✨"}</div>`;
+      latestTasksHtml+=`<div class="card featured-task" role="button" tabindex="0" onclick="${action}">${iconHtml}<div class="featured-info"><h4>${safe(task.title)}</h4><p class="muted">${safe(task.description|| (linkedApp?linkedApp.app_name:"Complete this task and submit proof."))}</p></div><span class="featured-reward">🟡 ${money(task.reward_paise)}</span></div>`;
+    }
+  }
   setPage(`
     <div class="card hero">
       <p>Welcome back ${svgIcon("hand")}</p>
@@ -292,11 +312,8 @@ async function renderHome(){
       <div class="tile" onclick="comingSoon()">${svgIcon("gift")}<br>Rewards</div>
     </div>
 
-    <div class="card">
-      <h3>Available Tasks</h3>
-      <p class="muted">Explore tasks and submit proof after completing them.</p>
-      <button class="btn" onclick="openPage('task')">View Tasks</button>
-    </div>
+    <div class="row"><h3>Featured Tasks 🔥</h3><button class="btn light" onclick="openPage('task')">View All ›</button></div>
+    ${latestTasksHtml}
 
     <div class="card">
       <h3>Refer & Earn ${svgIcon("heart")}</h3>
@@ -865,8 +882,58 @@ async function renderManageApps(){
   if(error){list.innerHTML=`Unable to load apps: ${safe(error.message)}`;return;}
   let html="<h3>Your Sponsored Apps</h3>";
   if(!data?.length)html+="<p>No apps added yet.</p>";
-  for(const a of data||[]){html+=`<hr><b>${safe(a.app_name)}</b> <span class="pill">${safe(a.status)}</span><p class="muted">${safe(a.description||"")}</p><button class="btn small light" onclick="toggleSponsoredApp('${safe(a.id)}','${safe(a.status)}')">${a.status==="published"?"Pause":"Publish"}</button><button class="btn small red" onclick="deleteSponsoredApp('${safe(a.id)}','${safe(a.icon_path||"")}')">Delete</button>`;}
+  for(const a of data||[]){
+    const {data:appTasks,error:tasksError}=await db.from("tasks").select("id,title,reward_paise,status").eq("app_id",a.id).order("created_at",{ascending:false});
+    html+=`<hr><b>${safe(a.app_name)}</b> <span class="pill">${safe(a.status)}</span>
+      <p class="muted">${safe(a.description||"")}</p>
+      <button class="btn small" onclick="renderAppPromotionTaskForm('${safe(a.id)}')">＋ Add Task & Reward</button>
+      <button class="btn small light" onclick="toggleSponsoredApp('${safe(a.id)}','${safe(a.status)}')">${a.status==="published"?"Pause":"Publish"}</button>
+      <button class="btn small red" onclick="deleteSponsoredApp('${safe(a.id)}','${safe(a.icon_path||"")}')">Delete</button>`;
+    if(tasksError) html+=`<p class="muted">Unable to load app tasks: ${safe(tasksError.message)}</p>`;
+    else if(!appTasks?.length) html+=`<p class="muted">No tasks added for this app yet.</p>`;
+    else {
+      html+=`<div class="card"><b>App Tasks & Rewards</b>`;
+      for(const t of appTasks) html+=`<p>${safe(t.title)} — <b>${money(t.reward_paise)}</b> <span class="pill">${safe(t.status)}</span></p>`;
+      html+=`</div>`;
+    }
+  }
   list.innerHTML=html;
+}
+async function renderAppPromotionTaskForm(appId){
+  if(!requireAdmin())return;
+  const {data:app,error}=await db.from("sponsored_apps").select("id,app_name").eq("id",appId).single();
+  if(error||!app){showMessage(error?.message||"App not found.");return;}
+  adminShell(`<div class="card">
+    <h3>Add Task for ${safe(app.app_name)}</h3>
+    <p class="muted">Set a separate reward for this task. Users will see this amount before submitting proof.</p>
+    <label>Task Title</label><input id="appPromoTaskTitle" placeholder="e.g. Install and register">
+    <label>Task Instructions</label><textarea id="appPromoTaskDescription" placeholder="Explain exactly what the user must complete"></textarea>
+    <label>Reward Amount (₹)</label><input id="appPromoTaskReward" type="number" min="1" step="1" placeholder="Enter reward amount">
+    <label>Task Link (optional)</label><input id="appPromoTaskLink" type="url" placeholder="https://...">
+    <button class="btn" onclick="saveAppPromotionTask('${safe(app.id)}','published')">Publish Task</button>
+    <button class="btn light" onclick="saveAppPromotionTask('${safe(app.id)}','draft')">Save as Draft</button>
+    <button class="btn light" onclick="renderManageApps()">Back to App Promotions</button>
+  </div>`);
+}
+async function saveAppPromotionTask(appId,status){
+  if(!requireAdmin())return;
+  const title=document.getElementById("appPromoTaskTitle").value.trim();
+  const description=document.getElementById("appPromoTaskDescription").value.trim();
+  const reward=Number(document.getElementById("appPromoTaskReward").value);
+  const taskUrl=document.getElementById("appPromoTaskLink").value.trim();
+  if(!title||!description||!Number.isFinite(reward)||reward<=0){
+    showMessage("Enter task title, instructions and a valid reward amount.");return;
+  }
+  if(taskUrl&&!/^https:\/\//i.test(taskUrl)){
+    showMessage("Task link must start with https://");return;
+  }
+  const {error}=await db.from("tasks").insert({
+    title,description,category:"App",reward_paise:Math.round(reward*100),
+    task_url:taskUrl||null,status,app_id:appId
+  });
+  if(error){showMessage(error.message);return;}
+  showMessage(status==="published"?"App task published with reward!":"App task saved as draft!");
+  renderManageApps();
 }
 async function saveSponsoredApp(){
   if(!requireAdmin())return;
